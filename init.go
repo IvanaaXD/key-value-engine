@@ -1,18 +1,17 @@
-package structures
+package NASP
 
 import (
 	"errors"
-	"github.com/IvanaaXD/NASP---Projekat/cache"
-	"github.com/IvanaaXD/NASP---Projekat/config"
-	"github.com/IvanaaXD/NASP---Projekat/memtable"
-	"github.com/IvanaaXD/NASP---Projekat/tokenBucket"
-	"github.com/IvanaaXD/NASP---Projekat/wal"
+	"github.com/IvanaaXD/NASP---Projekat/app/config"
+	"github.com/IvanaaXD/NASP---Projekat/structures/cache"
+	"github.com/IvanaaXD/NASP---Projekat/structures/memtable"
 	"os"
 )
 
 var Memtables *memtable.Memtables
 var Cache *cache.Cache
-var TokenBucket *tokenBucket.TokenBucket
+
+//var TokenBucket *tokenBucket.TokenBucket
 
 func Init() {
 
@@ -35,8 +34,8 @@ func Init() {
 
 	Memtables = memtable.NewMemtables(&config.GlobalConfig)
 	Cache = cache.NewCache(config.GlobalConfig.CacheCapacity)
-	TokenBucket = tokenBucket.NewTokenBucket(config.GlobalConfig.TokenNumber, config.GlobalConfig.TokenRefreshTime)
+	//TokenBucket = tokenBucket.NewTokenBucket(config.GlobalConfig.TokenNumber, config.GlobalConfig.TokenRefreshTime)
 
-	wal.CreateFile()
+	//wal.CreateFile()
 
 }

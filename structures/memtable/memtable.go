@@ -4,12 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"github.com/IvanaaXD/NASP---Projekat/app/config"
-	"github.com/IvanaaXD/NASP---Projekat/record"
 	b_tree "github.com/IvanaaXD/NASP---Projekat/structures/b-tree"
 	hash_map "github.com/IvanaaXD/NASP---Projekat/structures/hash-map"
 	"github.com/IvanaaXD/NASP---Projekat/structures/iterator"
+	"github.com/IvanaaXD/NASP---Projekat/structures/record"
 	skip_list "github.com/IvanaaXD/NASP---Projekat/structures/skip-list"
-	"io"
 	"os"
 	"sort"
 	"strings"
@@ -40,53 +39,53 @@ func NewMemtable(config *config.Config, strucName string) *Memtable {
 
 	mTable := Memtable{maxSize, structure}
 
-	wall, err := os.Stat(config.WalPath)
-	if err != nil {
-		panic(fmt.Sprintf("Log file error: %s", err))
-	}
+	//wall, err := os.Stat(config.WalPath)
+	//if err != nil {
+	//	panic(fmt.Sprintf("Log file error: %s", err))
+	//}
 
-	if wall.Size() > 0 {
-		err = mTable.recover()
-		if err != nil {
-			panic(err)
-		}
-	}
+	//if wall.Size() > 0 {
+	//	err = mTable.recover()
+	//	if err != nil {
+	//		panic(err)
+	//	}
+	//}
 
 	return &mTable
 }
 
 // recovering in case of error
 
-func (m *Memtable) recover() error {
-
-	walFile, err := os.Open(config.GlobalConfig.WalPath)
-
-	if err != nil {
-		panic(fmt.Sprintf("Log file error: %s", err))
-	}
-
-	for {
-		rec, err1 := wal.ReadWalRecord(walFile)
-		if err1 == io.EOF {
-			break
-		} else if err1 != nil {
-			return err1
-		}
-
-		var success bool
-		if rec.Tombstone {
-			success = m.Structure.Delete(rec)
-		} else {
-			success = m.Structure.Write(rec)
-		}
-
-		if !success {
-			return errors.New("recovery fail")
-		}
-	}
-
-	return nil
-}
+//func (m *Memtable) recover() error {
+//
+//	walFile, err := os.Open(config.GlobalConfig.WalPath)
+//
+//	if err != nil {
+//		panic(fmt.Sprintf("Log file error: %s", err))
+//	}
+//
+//	for {
+//		rec, err1 := wal.ReadWalRecord(walFile)
+//		if err1 == io.EOF {
+//			break
+//		} else if err1 != nil {
+//			return err1
+//		}
+//
+//		var success bool
+//		if rec.Tombstone {
+//			success = m.Structure.Delete(rec)
+//		} else {
+//			success = m.Structure.Write(rec)
+//		}
+//
+//		if !success {
+//			return errors.New("recovery fail")
+//		}
+//	}
+//
+//	return nil
+//}
 
 // clear memtable
 

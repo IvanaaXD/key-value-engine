@@ -1,21 +1,21 @@
 package io
 
 import (
+	"github.com/IvanaaXD/NASP---Projekat"
 	"github.com/IvanaaXD/NASP---Projekat/config"
 	"github.com/IvanaaXD/NASP---Projekat/record"
 	"github.com/IvanaaXD/NASP---Projekat/sstable"
-	"github.com/IvanaaXD/NASP---Projekat/structures"
 	"os"
 	"sort"
 )
 
 func Get(key string) (record.Record, bool) {
-	rec, _, exists := structures.Memtables.Read(key)
+	rec, _, exists := NASP.Memtables.Read(key)
 	if exists {
 		return rec, true
 	}
 
-	rec, exists = structures.Cache.Find(key)
+	rec, exists = NASP.Cache.Find(key)
 	if exists {
 		return rec, true
 	}
@@ -45,7 +45,7 @@ func Get(key string) (record.Record, bool) {
 	}
 
 	if found {
-		structures.Cache.Add(r)
+		NASP.Cache.Add(r)
 
 		if elem.Tombstone == 1 {
 			return record.Record{}, false
@@ -65,7 +65,7 @@ func Get(key string) (record.Record, bool) {
 }
 
 func PrefixScan(key string) []record.Record {
-	memtableRecords := structures.Memtables.PrefixScan(key)
+	memtableRecords := NASP.Memtables.PrefixScan(key)
 	sstableRecords := sstable.PrefixScanAll(key)
 
 	var result []record.Record
@@ -100,7 +100,7 @@ func PrefixScan(key string) []record.Record {
 }
 
 func RangeScan(start, end string) []record.Record {
-	memtableRecords := structures.Memtables.RangeScan(start, end)
+	memtableRecords := NASP.Memtables.RangeScan(start, end)
 	sstableRecords := sstable.RangeScanAll(start, end)
 
 	var result []record.Record

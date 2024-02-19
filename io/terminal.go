@@ -3,8 +3,8 @@ package io
 import (
 	"bufio"
 	"fmt"
+	"github.com/IvanaaXD/NASP---Projekat"
 	"github.com/IvanaaXD/NASP---Projekat/iterator"
-	"github.com/IvanaaXD/NASP---Projekat/structures"
 	"github.com/IvanaaXD/NASP---Projekat/tokenBucket"
 	"os"
 	"strconv"
@@ -401,7 +401,7 @@ func Menu() error {
 
 		switch scanner.Text() {
 		case "1": // PUT
-			if !structures.TokenBucket.AddRequest("user") {
+			if !NASP.TokenBucket.AddRequest("user") {
 				fmt.Println(tokenBucket.FAIL_MSG)
 			} else {
 				key, value := GetInput(true)
@@ -417,7 +417,7 @@ func Menu() error {
 			}
 
 		case "2": // READ
-			if !structures.TokenBucket.AddRequest("user") {
+			if !NASP.TokenBucket.AddRequest("user") {
 				fmt.Println(tokenBucket.FAIL_MSG)
 			} else {
 				key := GetKey()
@@ -432,7 +432,7 @@ func Menu() error {
 			}
 
 		case "3": // DELETE
-			if !structures.TokenBucket.AddRequest("user") {
+			if !NASP.TokenBucket.AddRequest("user") {
 				fmt.Println(tokenBucket.FAIL_MSG)
 			} else {
 				key := GetKey()
@@ -447,7 +447,7 @@ func Menu() error {
 			}
 
 		case "5": // PREFIX SCAN
-			if !structures.TokenBucket.AddRequest("user") {
+			if !NASP.TokenBucket.AddRequest("user") {
 				fmt.Println(tokenBucket.FAIL_MSG)
 			} else {
 				prefix := PrefixScanInput()
@@ -456,7 +456,7 @@ func Menu() error {
 			}
 
 		case "4": // RANGE SCAN
-			if !structures.TokenBucket.AddRequest("user") {
+			if !NASP.TokenBucket.AddRequest("user") {
 				fmt.Println(tokenBucket.FAIL_MSG)
 			} else {
 				start, end := RangeScanInput()
@@ -465,7 +465,7 @@ func Menu() error {
 			}
 
 		case "6": // MAKE NEW BF
-			if !structures.TokenBucket.AddRequest("user") {
+			if !NASP.TokenBucket.AddRequest("user") {
 				fmt.Println(tokenBucket.FAIL_MSG)
 			} else {
 				key, expectedElements, falsePositiveRate := GetBF()
@@ -476,7 +476,7 @@ func Menu() error {
 			}
 
 		case "7": // ADD T0 BF
-			if !structures.TokenBucket.AddRequest("user") {
+			if !NASP.TokenBucket.AddRequest("user") {
 				fmt.Println(tokenBucket.FAIL_MSG)
 			} else {
 				key, val := GetInput(true)
@@ -488,7 +488,7 @@ func Menu() error {
 			}
 
 		case "8": // FIND IN BF
-			if !structures.TokenBucket.AddRequest("user") {
+			if !NASP.TokenBucket.AddRequest("user") {
 				fmt.Println(tokenBucket.FAIL_MSG)
 			} else {
 				key := GetKey()
@@ -501,7 +501,7 @@ func Menu() error {
 			}
 
 		case "9": // DELETE BF
-			if !structures.TokenBucket.AddRequest("user") {
+			if !NASP.TokenBucket.AddRequest("user") {
 				fmt.Println(tokenBucket.FAIL_MSG)
 			} else {
 				key := GetKey()
@@ -513,7 +513,7 @@ func Menu() error {
 			}
 
 		case "10": // MAKE NEW SH
-			if !structures.TokenBucket.AddRequest("user") {
+			if !NASP.TokenBucket.AddRequest("user") {
 				fmt.Println(tokenBucket.FAIL_MSG)
 			} else {
 				key, text := GetSH()
@@ -525,7 +525,7 @@ func Menu() error {
 			}
 
 		case "11": // DISTANCE IN SH
-			if !structures.TokenBucket.AddRequest("user") {
+			if !NASP.TokenBucket.AddRequest("user") {
 				fmt.Println(tokenBucket.FAIL_MSG)
 			} else {
 				key1, key2 := GetKeysSH()
@@ -538,7 +538,7 @@ func Menu() error {
 			}
 
 		case "12": // DELETE SH
-			if !structures.TokenBucket.AddRequest("user") {
+			if !NASP.TokenBucket.AddRequest("user") {
 				fmt.Println(tokenBucket.FAIL_MSG)
 			} else {
 				key := GetKey()
@@ -550,7 +550,7 @@ func Menu() error {
 			}
 
 		case "13": // MAKE NEW CMS
-			if !structures.TokenBucket.AddRequest("user") {
+			if !NASP.TokenBucket.AddRequest("user") {
 				fmt.Println(tokenBucket.FAIL_MSG)
 			} else {
 				key, epsilon, delta := GetCMS()
@@ -561,7 +561,7 @@ func Menu() error {
 			}
 
 		case "14": // ADD T0 CMS
-			if !structures.TokenBucket.AddRequest("user") {
+			if !NASP.TokenBucket.AddRequest("user") {
 				fmt.Println(tokenBucket.FAIL_MSG)
 			} else {
 				key, val := GetInput(true)
@@ -573,7 +573,7 @@ func Menu() error {
 			}
 
 		case "15": // FREQUENCY IN CMS
-			if !structures.TokenBucket.AddRequest("user") {
+			if !NASP.TokenBucket.AddRequest("user") {
 				fmt.Println(tokenBucket.FAIL_MSG)
 			} else {
 				key := GetKey()
@@ -586,7 +586,7 @@ func Menu() error {
 			}
 
 		case "16": // DELETE CMS
-			if !structures.TokenBucket.AddRequest("user") {
+			if !NASP.TokenBucket.AddRequest("user") {
 				fmt.Println(tokenBucket.FAIL_MSG)
 			} else {
 				key := GetKey()
@@ -598,7 +598,7 @@ func Menu() error {
 			}
 
 		case "17": // MAKE NEW HLL
-			if !structures.TokenBucket.AddRequest("user") {
+			if !NASP.TokenBucket.AddRequest("user") {
 				fmt.Println(tokenBucket.FAIL_MSG)
 			} else {
 				key, m := GetHLL()
@@ -609,7 +609,7 @@ func Menu() error {
 			}
 
 		case "18": // ADD T0 HLL
-			if !structures.TokenBucket.AddRequest("user") {
+			if !NASP.TokenBucket.AddRequest("user") {
 				fmt.Println(tokenBucket.FAIL_MSG)
 			} else {
 				key, val := GetInput(true)
@@ -621,7 +621,7 @@ func Menu() error {
 			}
 
 		case "19": // COUNT IN HLL
-			if !structures.TokenBucket.AddRequest("user") {
+			if !NASP.TokenBucket.AddRequest("user") {
 				fmt.Println(tokenBucket.FAIL_MSG)
 			} else {
 				key := GetKey()
@@ -634,7 +634,7 @@ func Menu() error {
 			}
 
 		case "20": // DELETE HLL
-			if !structures.TokenBucket.AddRequest("user") {
+			if !NASP.TokenBucket.AddRequest("user") {
 				fmt.Println(tokenBucket.FAIL_MSG)
 			} else {
 				key := GetKey()

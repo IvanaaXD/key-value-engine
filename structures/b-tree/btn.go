@@ -1,7 +1,7 @@
 package b_tree
 
 import (
-	"github.com/IvanaaXD/NASP---Projekat/record"
+	"github.com/IvanaaXD/NASP/structures/record"
 )
 
 // node of tree

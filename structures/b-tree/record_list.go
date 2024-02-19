@@ -1,6 +1,6 @@
 package b_tree
 
-import "github.com/IvanaaXD/NASP---Projekat/record"
+import "github.com/IvanaaXD/NASP/structures/record"
 
 type RecordList struct {
 	recordList []*record.Record

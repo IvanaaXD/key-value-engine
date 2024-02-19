@@ -2,8 +2,8 @@ package memtable
 
 import (
 	"fmt"
-	"github.com/IvanaaXD/NASP---Projekat/config"
-	"github.com/IvanaaXD/NASP---Projekat/record"
+	"github.com/IvanaaXD/NASP---Projekat/app/config"
+	"github.com/IvanaaXD/NASP---Projekat/structures/record"
 	"sort"
 	"time"
 )

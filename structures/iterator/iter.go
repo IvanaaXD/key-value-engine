@@ -1,6 +1,6 @@
 package iterator
 
-import "github.com/IvanaaXD/NASP---Projekat/record"
+import "github.com/IvanaaXD/NASP---Projekat/structures/record"
 
 // b-tree, hash-map or skip-list
 

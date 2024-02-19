@@ -2,7 +2,7 @@ package iterator
 
 import (
 	"bytes"
-	"github.com/IvanaaXD/NASP---Projekat/config"
+	"github.com/IvanaaXD/NASP---Projekat/app/config"
 )
 
 func IsInvalidKey(i Iterator) bool {

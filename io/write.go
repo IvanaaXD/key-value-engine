@@ -1,9 +1,9 @@
 package io
 
 import (
+	"github.com/IvanaaXD/NASP---Projekat"
 	"github.com/IvanaaXD/NASP---Projekat/config"
 	"github.com/IvanaaXD/NASP---Projekat/record"
-	"github.com/IvanaaXD/NASP---Projekat/structures"
 	"github.com/IvanaaXD/NASP---Projekat/wal"
 )
 
@@ -25,8 +25,8 @@ func Put(key string, value []byte, timestamp int64) bool {
 
 	rec := record.Record{Key: key, Value: value, Timestamp: timestamp, Tombstone: tombstone}
 
-	err = structures.Memtables.Write(rec)
-	id := structures.Memtables.Current
+	err = NASP.Memtables.Write(rec)
+	id := NASP.Memtables.Current
 	wal.WriteOffsets(id, lenOfRec)
 
 	if err != nil {
@@ -54,10 +54,10 @@ func Delete(key string, timestamp int64) bool {
 
 	record := record.Record{Key: key, Value: value, Timestamp: timestamp, Tombstone: tombstone}
 
-	success := structures.Memtables.Delete(record.Key)
+	success := NASP.Memtables.Delete(record.Key)
 
 	if success == nil {
-		structures.Cache.Delete(record)
+		NASP.Cache.Delete(record)
 	}
 	return true
 }
