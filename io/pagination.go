@@ -2,7 +2,7 @@ package io
 
 import (
 	"fmt"
-	"github.com/IvanaaXD/NASP---Projekat/record"
+	"github.com/IvanaaXD/NASP/structures/record"
 	"math"
 	"strconv"
 )

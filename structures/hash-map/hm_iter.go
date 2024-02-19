@@ -2,8 +2,8 @@ package hash_map
 
 import (
 	"errors"
-	"github.com/IvanaaXD/NASP---Projekat/iterator"
-	"github.com/IvanaaXD/NASP---Projekat/record"
+	"github.com/IvanaaXD/NASP/structures/iterator"
+	"github.com/IvanaaXD/NASP/structures/record"
 	"sort"
 )
 

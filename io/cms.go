@@ -3,8 +3,9 @@ package io
 import (
 	"errors"
 	"fmt"
-	"github.com/IvanaaXD/NASP---Projekat/CountMinSketch"
-	"github.com/IvanaaXD/NASP---Projekat/config"
+	"github.com/IvanaaXD/NASP/app/config"
+	count_min_sketch "github.com/IvanaaXD/NASP/structures/count-min-sketch"
+	"github.com/IvanaaXD/NASP/structures/record"
 	"time"
 )
 
@@ -17,7 +18,7 @@ func NewCMS(key string, epsilon, delta float64) error {
 		return errors.New("cms with given key already exists")
 	}
 
-	cms := CountMinSketch.CreateCMS(epsilon, delta)
+	cms := count_min_sketch.CreateCMS(epsilon, delta)
 
 	success := Put(key, cms.Serialize(), time.Now().UnixNano())
 	if success {
@@ -48,12 +49,15 @@ func WriteCMS(key string, value []byte) error {
 
 	key = config.GlobalConfig.CMSPrefix + key
 
-	rec, exists := Get(key)
+	var rec record.Record
+	var exists bool
+
+	rec, exists = Get(key)
 	if !exists {
 		return errors.New("no cms with given key")
 	}
 
-	cms := CountMinSketch.Deserialize(rec.Value)
+	cms := count_min_sketch.Deserialize(rec.Value)
 	cms.AddItem(value)
 
 	success := Put(key, cms.Serialize(), time.Now().UnixNano())
@@ -69,12 +73,15 @@ func CMSFrequency(key string) (uint64, bool) {
 
 	key = config.GlobalConfig.CMSPrefix + key
 
-	rec, exists := Get(key)
+	var rec record.Record
+	var exists bool
+
+	rec, exists = Get(key)
 	if !exists {
 		return 0, false
 	}
 
-	cms := CountMinSketch.Deserialize(rec.Value)
+	cms := count_min_sketch.Deserialize(rec.Value)
 
 	found := cms.GetFrequency(rec.Value)
 

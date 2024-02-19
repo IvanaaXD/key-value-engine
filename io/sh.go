@@ -3,8 +3,8 @@ package io
 import (
 	"errors"
 	"fmt"
-	"github.com/IvanaaXD/NASP---Projekat/config"
-	simhash "github.com/IvanaaXD/NASP---Projekat/sim-hash"
+	"github.com/IvanaaXD/NASP/app/config"
+	simhash "github.com/IvanaaXD/NASP/structures/sim-hash"
 	"time"
 )
 

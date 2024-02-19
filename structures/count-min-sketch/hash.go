@@ -1,4 +1,4 @@
-package CountMinSketch
+package count_min_sketch
 
 import (
 	"crypto/md5"

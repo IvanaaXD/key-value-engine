@@ -6,6 +6,7 @@ import (
 	"gopkg.in/yaml.v3"
 	"os"
 	"path/filepath"
+	"runtime"
 )
 
 var GlobalConfig Config
@@ -192,32 +193,63 @@ func NewConfig(filename string) *Config {
 	return &config
 }
 
-func Init() {
-	yamlPath := ".." + separator + "config" + separator + "config.yaml"
-	yamlPathWithoutDots := "config" + separator + "config.yaml"
+//func Init() {
+//	yamlPath := ".." + separator + "app" + separator + "config" + separator + "config.yaml"
+//	yamlPathWithoutDots := "app" + separator + "config" + separator + "config.yaml"
+//
+//	var configPath string
+//
+//	if _, err := os.Stat(yamlPath); !errors.Is(err, os.ErrNotExist) {
+//		configPath = yamlPath
+//	} else {
+//		if _, err = os.Stat(yamlPathWithoutDots); !errors.Is(err, os.ErrNotExist) {
+//			configPath = yamlPathWithoutDots
+//		} else {
+//			configPath = yamlPathWithoutDots
+//			f, err1 := os.Create(configPath)
+//			defer f.Close()
+//			if err1 != nil {
+//				panic(err1)
+//			}
+//
+//			out, err := yaml.Marshal(&GlobalConfig)
+//			if err != nil {
+//				panic(err)
+//			}
+//
+//			f.Write(out)
+//		}
+//	}
+//	GlobalConfig = *NewConfig(configPath)
+//}
 
-	var configPath string
-
-	if _, err := os.Stat(yamlPath); !errors.Is(err, os.ErrNotExist) {
-		configPath = yamlPath
-	} else {
-		if _, err := os.Stat(yamlPathWithoutDots); !errors.Is(err, os.ErrNotExist) {
-			configPath = yamlPathWithoutDots
-		} else {
-			configPath = yamlPathWithoutDots
-			f, err := os.Create(configPath)
-			defer f.Close()
-			if err != nil {
-				panic(err)
-			}
-
-			out, err := yaml.Marshal(&GlobalConfig)
-			if err != nil {
-				panic(err)
-			}
-
-			f.Write(out)
-		}
+func getExecutablePath() string {
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		panic("Failed to get the executable path.")
 	}
-	GlobalConfig = *NewConfig(configPath)
+	return filepath.Dir(filename)
+}
+
+func Init() {
+	executablePath := getExecutablePath()
+	//yamlPath := filepath.Join(executablePath, "app", "config", "config.yaml")
+	yamlPath := executablePath
+
+	if _, err := os.Stat(yamlPath); errors.Is(err, os.ErrNotExist) {
+		f, err := os.Create(yamlPath)
+		if err != nil {
+			panic(err)
+		}
+		defer f.Close()
+
+		out, err := yaml.Marshal(&GlobalConfig)
+		if err != nil {
+			panic(err)
+		}
+
+		f.Write(out)
+	}
+
+	GlobalConfig = *NewConfig(yamlPath)
 }

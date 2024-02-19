@@ -32,28 +32,28 @@ func NewMemtables(config *config.Config) *Memtables {
 	return mi
 }
 
-func (mi *Memtables) Recover() error {
-
-	n := config.GlobalConfig.MemtableSize
-
-	for i := 0; i < int(n); i++ {
-		err := mi.Tables[i].recover()
-		if mi.Tables[mi.Current].maxSize == mi.Tables[mi.Current].Structure.GetSize() {
-			mi.Current = (mi.Current + 1) % mi.MaxTables
-			if mi.Current == mi.Last {
-				err = mi.Flush()
-				if err != nil {
-					fmt.Println("Error flushing: ", err)
-					return err
-				}
-			}
-		}
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
+//func (mi *Memtables) Recover() error {
+//
+//	n := config.GlobalConfig.MemtableSize
+//
+//	for i := 0; i < int(n); i++ {
+//		err := mi.Tables[i].recover()
+//		if mi.Tables[mi.Current].maxSize == mi.Tables[mi.Current].Structure.GetSize() {
+//			mi.Current = (mi.Current + 1) % mi.MaxTables
+//			if mi.Current == mi.Last {
+//				err = mi.Flush()
+//				if err != nil {
+//					fmt.Println("Error flushing: ", err)
+//					return err
+//				}
+//			}
+//		}
+//		if err != nil {
+//			return err
+//		}
+//	}
+//	return nil
+//}
 
 func (mi *Memtables) Write(rec record.Record) error {
 

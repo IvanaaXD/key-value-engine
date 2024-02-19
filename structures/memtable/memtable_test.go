@@ -2,8 +2,8 @@ package memtable
 
 import (
 	"fmt"
-	"github.com/IvanaaXD/NASP---Projekat/app/config"
-	"github.com/IvanaaXD/NASP---Projekat/structures/record"
+	"github.com/IvanaaXD/NASP/app/config"
+	"github.com/IvanaaXD/NASP/structures/record"
 	"testing"
 )
 

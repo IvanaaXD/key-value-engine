@@ -43,7 +43,7 @@ func TestSerializationDeserialization(t *testing.T) {
 	}
 
 	for i, key := range expectedCompressionDict.keysString {
-		if newKey, ok := newCompressionDict.GetKey(i); ok {
+		if newKey, ok := newCompressionDict.GetKey(uint64(i)); ok {
 			if key != newKey {
 				t.Errorf("Key mismatch at index %d: expected %s, got %s", i, key, newKey)
 			}

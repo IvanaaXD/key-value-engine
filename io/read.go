@@ -1,10 +1,9 @@
 package io
 
 import (
-	"github.com/IvanaaXD/NASP---Projekat"
-	"github.com/IvanaaXD/NASP---Projekat/config"
-	"github.com/IvanaaXD/NASP---Projekat/record"
-	"github.com/IvanaaXD/NASP---Projekat/sstable"
+	"github.com/IvanaaXD/NASP"
+	"github.com/IvanaaXD/NASP/app/config"
+	"github.com/IvanaaXD/NASP/structures/record"
 	"os"
 	"sort"
 )
@@ -27,32 +26,32 @@ func Get(key string) (record.Record, bool) {
 		return record.Record{}, false
 	}
 
-	found, elem := sstable.Find(key, config.GlobalConfig.Prefix, uint64(config.GlobalConfig.LSMMaxLevels)) // , config.SST_FILES
+	// found, elem := sstable.Find(key, config.GlobalConfig.Prefix, uint64(config.GlobalConfig.LSMMaxLevels)) // , config.SST_FILES
 
 	// record - imas kljuc  i dobijas vrednosti
-	ts := false
-	if elem.Tombstone == 1 {
-		ts = true
-	} else {
-		ts = false
-	}
-
-	r := record.Record{
-		Key:       key,
-		Value:     elem.Value,
-		Timestamp: int64(elem.Timestamp),
-		Tombstone: ts,
-	}
-
-	if found {
-		NASP.Cache.Add(r)
-
-		if elem.Tombstone == 1 {
-			return record.Record{}, false
-		} else {
-			return r, true
-		}
-	}
+	//ts := false
+	//if elem.Tombstone == 1 {
+	//	ts = true
+	//} else {
+	//	ts = false
+	//}
+	//
+	//r := record.Record{
+	//	Key:       key,
+	//	Value:     elem.Value,
+	//	Timestamp: int64(elem.Timestamp),
+	//	Tombstone: ts,
+	//}
+	//
+	//if found {
+	//	NASP.Cache.Add(r)
+	//
+	//	if elem.Tombstone == 1 {
+	//		return record.Record{}, false
+	//	} else {
+	//		return r, true
+	//	}
+	//}
 
 	// FIND
 	/*
@@ -66,7 +65,7 @@ func Get(key string) (record.Record, bool) {
 
 func PrefixScan(key string) []record.Record {
 	memtableRecords := NASP.Memtables.PrefixScan(key)
-	sstableRecords := sstable.PrefixScanAll(key)
+	// sstableRecords := sstable.PrefixScanAll(key)
 
 	var result []record.Record
 
@@ -74,17 +73,17 @@ func PrefixScan(key string) []record.Record {
 		result = append(result, *memRec)
 	}
 
-	for _, sstRec := range sstableRecords {
-		found := false
-		for i := 0; i < len(result); i++ {
-			if result[i].Key == sstRec.Key {
-				found = true
-			}
-		}
-		if found {
-			result = append(result, *sstRec)
-		}
-	}
+	//for _, sstRec := range sstableRecords {
+	//	found := false
+	//	for i := 0; i < len(result); i++ {
+	//		if result[i].Key == sstRec.Key {
+	//			found = true
+	//		}
+	//	}
+	//	if found {
+	//		result = append(result, *sstRec)
+	//	}
+	//}
 
 	for _, rec := range result {
 		if !rec.Tombstone {
@@ -101,7 +100,7 @@ func PrefixScan(key string) []record.Record {
 
 func RangeScan(start, end string) []record.Record {
 	memtableRecords := NASP.Memtables.RangeScan(start, end)
-	sstableRecords := sstable.RangeScanAll(start, end)
+	// sstableRecords := sstable.RangeScanAll(start, end)
 
 	var result []record.Record
 
@@ -109,17 +108,17 @@ func RangeScan(start, end string) []record.Record {
 		result = append(result, *memRec)
 	}
 
-	for _, sstRec := range sstableRecords {
-		found := false
-		for i := 0; i < len(result); i++ {
-			if result[i].Key == sstRec.Key {
-				found = true
-			}
-		}
-		if found {
-			result = append(result, *sstRec)
-		}
-	}
+	//for _, sstRec := range sstableRecords {
+	//	found := false
+	//	for i := 0; i < len(result); i++ {
+	//		if result[i].Key == sstRec.Key {
+	//			found = true
+	//		}
+	//	}
+	//	if found {
+	//		result = append(result, *sstRec)
+	//	}
+	//}
 
 	for _, rec := range result {
 		if !rec.Tombstone {
