@@ -3,17 +3,12 @@ package memtable
 import (
 	"errors"
 	"fmt"
-	b_tree "github.com/IvanaaXD/NASP---Projekat/b-tree"
-	"github.com/IvanaaXD/NASP---Projekat/config"
-	elements_db "github.com/IvanaaXD/NASP---Projekat/elements-db"
-	GTypes "github.com/IvanaaXD/NASP---Projekat/gen-types"
-	hash_map "github.com/IvanaaXD/NASP---Projekat/hash-map"
-	"github.com/IvanaaXD/NASP---Projekat/iterator"
-	lsm_tree "github.com/IvanaaXD/NASP---Projekat/lsm-tree"
+	"github.com/IvanaaXD/NASP---Projekat/app/config"
 	"github.com/IvanaaXD/NASP---Projekat/record"
-	skip_list "github.com/IvanaaXD/NASP---Projekat/skip-list"
-	"github.com/IvanaaXD/NASP---Projekat/sstable"
-	"github.com/IvanaaXD/NASP---Projekat/wal"
+	b_tree "github.com/IvanaaXD/NASP---Projekat/structures/b-tree"
+	hash_map "github.com/IvanaaXD/NASP---Projekat/structures/hash-map"
+	"github.com/IvanaaXD/NASP---Projekat/structures/iterator"
+	skip_list "github.com/IvanaaXD/NASP---Projekat/structures/skip-list"
 	"io"
 	"os"
 	"sort"
@@ -145,7 +140,7 @@ func (m *Memtable) Flush() error {
 		return records[i].Key < records[j].Key
 	})
 
-	var keyValArray []GTypes.KeyVal[string, elements_db.DatabaseElem]
+	/*var keyValArray []GTypes.KeyVal[string, elements_db.DatabaseElem]
 
 	for _, rec := range records {
 		keyVal := GTypes.KeyVal[string, elements_db.DatabaseElem]{
@@ -165,7 +160,7 @@ func (m *Memtable) Flush() error {
 		lsm_tree.SizeTieredCompaction(1)
 	} else {
 		lsm_tree.LeveledCompaction(1)
-	}
+	}*/
 
 	err := m.WalFlush2()
 	if err != nil {

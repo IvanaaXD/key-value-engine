@@ -2,7 +2,7 @@ package b_tree
 
 import (
 	"fmt"
-	"github.com/IvanaaXD/NASP---Projekat/record"
+	"github.com/IvanaaXD/NASP---Projekat/structures/record"
 )
 
 type BTree struct {
