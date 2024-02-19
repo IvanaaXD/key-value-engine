@@ -2,9 +2,9 @@ package NASP
 
 import (
 	"errors"
-	"github.com/IvanaaXD/NASP---Projekat/app/config"
-	"github.com/IvanaaXD/NASP---Projekat/structures/cache"
-	"github.com/IvanaaXD/NASP---Projekat/structures/memtable"
+	"github.com/IvanaaXD/NASP/app/config"
+	"github.com/IvanaaXD/NASP/structures/cache"
+	"github.com/IvanaaXD/NASP/structures/memtable"
 	"os"
 )
 

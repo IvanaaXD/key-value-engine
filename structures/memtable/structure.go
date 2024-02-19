@@ -1,8 +1,8 @@
 package memtable
 
 import (
-	"github.com/IvanaaXD/NASP---Projekat/structures/iterator"
-	"github.com/IvanaaXD/NASP---Projekat/structures/record"
+	"github.com/IvanaaXD/NASP/structures/iterator"
+	"github.com/IvanaaXD/NASP/structures/record"
 )
 
 // structure of memtable, includes b-tree and skip-list

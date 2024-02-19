@@ -1,6 +1,6 @@
 package skip_list
 
-import "github.com/IvanaaXD/NASP---Projekat/structures/record"
+import "github.com/IvanaaXD/NASP/structures/record"
 
 // node of skiplist
 

@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/IvanaaXD/NASP---Projekat/app/config"
+	"github.com/IvanaaXD/NASP/app/config"
 	"io"
 	"os"
 	"path/filepath"

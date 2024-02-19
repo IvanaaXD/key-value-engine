@@ -2,7 +2,7 @@ package record
 
 import (
 	"encoding/binary"
-	"github.com/IvanaaXD/NASP---Projekat/app/config"
+	"github.com/IvanaaXD/NASP/app/config"
 )
 
 // Struktura sloga u memoriji

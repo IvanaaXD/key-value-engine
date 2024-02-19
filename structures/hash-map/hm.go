@@ -2,7 +2,7 @@ package hash_map
 
 import (
 	"errors"
-	"github.com/IvanaaXD/NASP---Projekat/structures/record"
+	"github.com/IvanaaXD/NASP/structures/record"
 	"sort"
 	"time"
 )

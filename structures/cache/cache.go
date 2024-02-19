@@ -3,7 +3,7 @@ package cache
 import (
 	"container/list"
 	"fmt"
-	"github.com/IvanaaXD/NASP---Projekat/structures/record"
+	"github.com/IvanaaXD/NASP/structures/record"
 )
 
 type Cache struct {

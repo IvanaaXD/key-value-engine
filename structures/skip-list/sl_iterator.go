@@ -2,8 +2,8 @@ package skip_list
 
 import (
 	"errors"
-	"github.com/IvanaaXD/NASP---Projekat/iterator"
-	"github.com/IvanaaXD/NASP---Projekat/record"
+	"github.com/IvanaaXD/NASP/iterator"
+	"github.com/IvanaaXD/NASP/record"
 )
 
 type SkipListIterator struct {
