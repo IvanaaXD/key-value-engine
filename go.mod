@@ -1,5 +1,5 @@
 
-module github.com/IvanaaXD/NASP---Projekat
+module github.com/IvanaaXD/NASP
 
 go 1.21.3
 
