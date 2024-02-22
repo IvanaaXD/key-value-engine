@@ -34,14 +34,8 @@ const (
 	TOKEN_NUMBER               = 20
 	TOKEN_REFRESH_TIME         = 2
 	MAX_ENTRY_SIZE             = 1024
-	CRC_SIZE                   = 4
-	TIMESTAMP_SIZE             = 8
 	COMPRESSION_DICT_FILE_PATH = "resources/compression_dict.dat"
-	TOMBSTONE_SIZE             = 1
-	KEY_SIZE_SIZE              = 8
-	VALUE_SIZE_SIZE            = 8
 	WAL_PATH                   = "resources/wal.log"
-	CRC_START                  = 0
 	SCALING_FACTOR             = 2
 	COMPACTION_ALGORITHM       = "sizeTiered"
 	SEGMENT_SIZE               = 256
@@ -53,11 +47,17 @@ const (
 	LSM_MAX_LEVELS             = 4
 	LSM_MAX_TABLES             = 4
 	OFFSET_PATH                = "resources/wal.txt"
-	TIMESTAMP_START            = CRC_START + CRC_SIZE
-	TOMBSTONE_START            = TIMESTAMP_START + TIMESTAMP_SIZE
-	KEY_SIZE_START             = TOMBSTONE_START + TOMBSTONE_SIZE
-	VALUE_SIZE_START           = KEY_SIZE_START + KEY_SIZE_SIZE
-	KEY_START                  = VALUE_SIZE_START + VALUE_SIZE_SIZE
+
+	TIMESTAMP_SIZE  = 8
+	TOMBSTONE_SIZE  = 1
+	KEY_SIZE_SIZE   = 8
+	VALUE_SIZE_SIZE = 8
+
+	TIMESTAMP_START  = 0
+	TOMBSTONE_START  = TIMESTAMP_START + TIMESTAMP_SIZE
+	KEY_SIZE_START   = TOMBSTONE_START + TOMBSTONE_SIZE
+	KEY_START        = TOMBSTONE_START + KEY_SIZE_START
+	VALUE_SIZE_START = KEY_START
 )
 
 type Config struct {
@@ -122,12 +122,10 @@ func NewConfig(filename string) *Config {
 		config.TokenRefreshTime = TOKEN_REFRESH_TIME
 		config.WalPath = WAL_PATH
 		config.MaxEntrySize = MAX_ENTRY_SIZE
-		config.CrcSize = CRC_SIZE
 		config.TimestampSize = TIMESTAMP_SIZE
 		config.TombstoneSize = TOMBSTONE_SIZE
 		config.KeySizeSize = KEY_SIZE_SIZE
 		config.ValueSizeSize = VALUE_SIZE_SIZE
-		config.CrcStart = CRC_START
 		config.BTreeOrder = B_TREE_ORDER
 		config.SegmentSize = SEGMENT_SIZE
 		config.ScalingFactor = SCALING_FACTOR
@@ -166,12 +164,10 @@ func NewConfig(filename string) *Config {
 		config.CmsEpsilon = CMS_EPSILON
 		config.WalPath = WAL_PATH
 		config.MaxEntrySize = MAX_ENTRY_SIZE
-		config.CrcSize = CRC_SIZE
 		config.TimestampSize = TIMESTAMP_SIZE
 		config.TombstoneSize = TOMBSTONE_SIZE
 		config.KeySizeSize = KEY_SIZE_SIZE
 		config.ValueSizeSize = VALUE_SIZE_SIZE
-		config.CrcStart = CRC_START
 		config.BTreeOrder = B_TREE_ORDER
 		config.ScalingFactor = SCALING_FACTOR
 		config.SSTableSize = SSTABLE_SIZE
