@@ -1,13 +1,15 @@
 package writeaheadlog
 
 import (
-	elementzamemtable "NASP_Projekat/pomocnestrukture/elementZaMemtable"
 	"encoding/binary"
 	"fmt"
 	"log"
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/IvanaaXD/NASP/app/config"
+	record "github.com/IvanaaXD/NASP/structures/record"
 )
 
 type WriteAheadLog struct {
@@ -56,7 +58,7 @@ func (wal *WriteAheadLog) procitajSledeci(file *os.File) ([]byte, bool) {
 	var fileChanged bool = false
 	allBytes := make([]byte, 0)
 
-	CRCBytes := make([]byte, elementzamemtable.CRCLen)
+	CRCBytes := make([]byte, config.CRC_SIZE)
 	bytesRead, err := file.Read(CRCBytes)
 	if bytesRead == 0 { // Ako nije nista ucitano - nema vise podataka
 		return nil, false
@@ -65,7 +67,7 @@ func (wal *WriteAheadLog) procitajSledeci(file *os.File) ([]byte, bool) {
 		log.Fatal(err)
 	}
 	wal.CurrentOffset = wal.CurrentOffset + uint64(bytesRead)
-	if uint64(bytesRead) != elementzamemtable.CRCLen {
+	if uint64(bytesRead) != config.CRC_SIZE {
 		if !fileChanged {
 			wal.CurrentOffset = 0
 		}
@@ -76,13 +78,13 @@ func (wal *WriteAheadLog) procitajSledeci(file *os.File) ([]byte, bool) {
 	}
 	allBytes = append(allBytes, CRCBytes...)
 
-	timestampBytes := make([]byte, elementzamemtable.TimestampLen)
+	timestampBytes := make([]byte, config.TIMESTAMP_SIZE)
 	bytesRead, err = file.Read(timestampBytes)
 	if err != nil && bytesRead != 0 {
 		log.Fatal(err)
 	}
 	wal.CurrentOffset = wal.CurrentOffset + uint64(bytesRead)
-	if uint64(bytesRead) != elementzamemtable.TimestampLen {
+	if uint64(bytesRead) != config.TIMESTAMP_SIZE {
 		if !fileChanged {
 			wal.CurrentOffset = 0
 		}
@@ -93,13 +95,13 @@ func (wal *WriteAheadLog) procitajSledeci(file *os.File) ([]byte, bool) {
 	}
 	allBytes = append(allBytes, timestampBytes...)
 
-	tombstoneBytes := make([]byte, elementzamemtable.TombstoneLen)
+	tombstoneBytes := make([]byte, config.TOMBSTONE_SIZE)
 	bytesRead, err = file.Read(tombstoneBytes)
 	if err != nil && bytesRead != 0 {
 		log.Fatal(err)
 	}
 	wal.CurrentOffset = wal.CurrentOffset + uint64(bytesRead)
-	if uint64(bytesRead) != elementzamemtable.TombstoneLen {
+	if uint64(bytesRead) != config.TOMBSTONE_SIZE {
 		if !fileChanged {
 			wal.CurrentOffset = 0
 		}
@@ -110,13 +112,13 @@ func (wal *WriteAheadLog) procitajSledeci(file *os.File) ([]byte, bool) {
 	}
 	allBytes = append(allBytes, tombstoneBytes...)
 
-	keySizeBytes := make([]byte, elementzamemtable.KeySizeLen)
+	keySizeBytes := make([]byte, config.KEY_SIZE_SIZE)
 	bytesRead, err = file.Read(keySizeBytes)
 	if err != nil && bytesRead != 0 {
 		log.Fatal(err)
 	}
 	wal.CurrentOffset = wal.CurrentOffset + uint64(bytesRead)
-	if uint64(bytesRead) != elementzamemtable.KeySizeLen {
+	if uint64(bytesRead) != config.KEY_SIZE_SIZE {
 		if !fileChanged {
 			wal.CurrentOffset = 0
 		}
@@ -127,13 +129,13 @@ func (wal *WriteAheadLog) procitajSledeci(file *os.File) ([]byte, bool) {
 	}
 	allBytes = append(allBytes, keySizeBytes...)
 
-	valueSizeBytes := make([]byte, elementzamemtable.ValueSizeLen)
+	valueSizeBytes := make([]byte, config.VALUE_SIZE_SIZE)
 	bytesRead, err = file.Read(valueSizeBytes)
 	if err != nil && bytesRead != 0 {
 		log.Fatal(err)
 	}
 	wal.CurrentOffset = wal.CurrentOffset + uint64(bytesRead)
-	if uint64(bytesRead) != elementzamemtable.ValueSizeLen {
+	if uint64(bytesRead) != config.VALUE_SIZE_SIZE {
 		if !fileChanged {
 			wal.CurrentOffset = 0
 		}
@@ -184,8 +186,8 @@ func (wal *WriteAheadLog) procitajSledeci(file *os.File) ([]byte, bool) {
 }
 
 // Pomocna funkcija koja radi isto sto i UcitajSve(), samo sto ne stavlja offset na 0
-func (wal *WriteAheadLog) ucitajSvePomocna() []elementzamemtable.ElementMemtable {
-	allElements := make([]elementzamemtable.ElementMemtable, 0)
+func (wal *WriteAheadLog) ucitajSvePomocna() []record.Record {
+	allElements := make([]record.Record, 0)
 
 	_, err := os.Stat(wal.Filename) // Provera da li postoji ikakav log
 	if os.IsNotExist(err) {
@@ -204,7 +206,7 @@ func (wal *WriteAheadLog) ucitajSvePomocna() []elementzamemtable.ElementMemtable
 			file.Close()
 			break
 		}
-		konvertovano := elementzamemtable.Deserijalizuj(podaci)
+		konvertovano := record.BytesToRecord(podaci)
 		if fileChanged {
 			file.Close()
 			file, err = os.OpenFile(wal.Filename, os.O_RDONLY|os.O_CREATE, 0664)
@@ -220,8 +222,8 @@ func (wal *WriteAheadLog) ucitajSvePomocna() []elementzamemtable.ElementMemtable
 }
 
 // Funkcija ucitava sve elemente trenutno upisane u write ahead log i vraca niz svih njih
-func (wal *WriteAheadLog) UcitajSve() []elementzamemtable.ElementMemtable {
-	allElements := make([]elementzamemtable.ElementMemtable, 0)
+func (wal *WriteAheadLog) UcitajSve() []record.Record {
+	allElements := make([]record.Record, 0)
 
 	_, err := os.Stat("./wal/")
 	if os.IsNotExist(err) {
@@ -261,7 +263,7 @@ func (wal *WriteAheadLog) UcitajSve() []elementzamemtable.ElementMemtable {
 			file.Close()
 			break
 		}
-		konvertovano := elementzamemtable.Deserijalizuj(podaci)
+		konvertovano := record.BytesToRecord(podaci)
 		if fileChanged {
 			file.Close()
 			file, err = os.OpenFile(wal.Filename, os.O_RDONLY|os.O_CREATE, 0664)
@@ -277,7 +279,7 @@ func (wal *WriteAheadLog) UcitajSve() []elementzamemtable.ElementMemtable {
 }
 
 // Pomocna funkcija pri brisanju delova wal-a. Radi isto sto i dodaj zapis, osim azuriranja broja sacuvanih elemenata po memtabeli
-func (wal *WriteAheadLog) dodajZapisPomocna(element elementzamemtable.ElementMemtable) {
+func (wal *WriteAheadLog) dodajZapisPomocna(element record.Record) {
 	file, err := os.OpenFile(wal.Filename, os.O_APPEND|os.O_CREATE, 0664)
 	if err != nil {
 		log.Fatal(err)
@@ -324,7 +326,7 @@ func (wal *WriteAheadLog) dodajZapisPomocna(element elementzamemtable.ElementMem
 }
 
 // Funkcija dodaje zapis u write ahead log
-func (wal *WriteAheadLog) DodajZapis(element elementzamemtable.ElementMemtable, indeksMemtabele int, sstableCreated bool) {
+func (wal *WriteAheadLog) DodajZapis(element record.Record, indeksMemtabele int, sstableCreated bool) {
 	file, err := os.OpenFile(wal.Filename, os.O_APPEND|os.O_CREATE, 0664)
 	if err != nil {
 		log.Fatal(err)
