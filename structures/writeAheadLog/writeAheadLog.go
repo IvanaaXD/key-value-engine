@@ -135,7 +135,6 @@ func (wal *WriteAheadLog) ReadRecord(memtableIndex int) record.Record {
 
 // Funkcija koja upisuje prosledjeni zapis u WAL. Potrebno takodje proslediti indeks memtabele u koji je record bio upisan
 func (wal *WriteAheadLog) WriteRecord(inputRecord record.Record, memtableIndex int) {
-	// TO-DO
 	file, err := os.OpenFile(wal.Filename, os.O_APPEND|os.O_CREATE, 0777)
 	if err != nil {
 		log.Fatal(err)
