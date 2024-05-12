@@ -1,7 +1,6 @@
 package io
 
 import (
-	"github.com/IvanaaXD/NASP"
 	"github.com/IvanaaXD/NASP/app/config"
 	"github.com/IvanaaXD/NASP/structures/record"
 	"os"

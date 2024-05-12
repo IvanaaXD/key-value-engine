@@ -20,6 +20,7 @@ const (
 	CMS_PREFIX = "___cms___"
 	HLL_PREFIX = "___hll___"
 	SH_PREFIX  = "___sh___"
+	TB_PREFIX  = "___tb___"
 
 	BF_EXPECTED_EL             = 1000  // broj ocekivanih elemenata u bloom filteru
 	BF_FALSE_POSITIVE_RATE     = 0.001 // bloom filter false positive
@@ -34,14 +35,8 @@ const (
 	TOKEN_NUMBER               = 20
 	TOKEN_REFRESH_TIME         = 2
 	MAX_ENTRY_SIZE             = 1024
-	CRC_SIZE                   = 4
-	TIMESTAMP_SIZE             = 8
 	COMPRESSION_DICT_FILE_PATH = "resources/compression_dict.dat"
-	TOMBSTONE_SIZE             = 1
-	KEY_SIZE_SIZE              = 8
-	VALUE_SIZE_SIZE            = 8
 	WAL_PATH                   = "resources/wal.log"
-	CRC_START                  = 0
 	SCALING_FACTOR             = 2
 	COMPACTION_ALGORITHM       = "sizeTiered"
 	SEGMENT_SIZE               = 256
@@ -53,11 +48,17 @@ const (
 	LSM_MAX_LEVELS             = 4
 	LSM_MAX_TABLES             = 4
 	OFFSET_PATH                = "resources/wal.txt"
-	TIMESTAMP_START            = CRC_START + CRC_SIZE
-	TOMBSTONE_START            = TIMESTAMP_START + TIMESTAMP_SIZE
-	KEY_SIZE_START             = TOMBSTONE_START + TOMBSTONE_SIZE
-	VALUE_SIZE_START           = KEY_SIZE_START + KEY_SIZE_SIZE
-	KEY_START                  = VALUE_SIZE_START + VALUE_SIZE_SIZE
+
+	TIMESTAMP_SIZE  = 8
+	TOMBSTONE_SIZE  = 1
+	KEY_SIZE_SIZE   = 8
+	VALUE_SIZE_SIZE = 8
+
+	TIMESTAMP_START  = 0
+	TOMBSTONE_START  = TIMESTAMP_START + TIMESTAMP_SIZE
+	KEY_SIZE_START   = TOMBSTONE_START + TOMBSTONE_SIZE
+	KEY_START        = TOMBSTONE_START + KEY_SIZE_START
+	VALUE_SIZE_START = KEY_START
 )
 
 type Config struct {
@@ -69,8 +70,8 @@ type Config struct {
 	MemtableSize        uint     `yaml:"memtableSize"`
 	MemtableNum         uint     `yaml:"memtableNum"`
 	StructureType       string   `yaml:"structureType"`
-	TokenNumber         int      `yaml:"tokenNumber"`
-	TokenRefreshTime    float64  `yaml:"tokenRefreshTime"`
+	TokenNumber         uint16   `yaml:"tokenNumber"`
+	TokenRefreshTime    uint16   `yaml:"tokenRefreshTime"`
 	WalPath             string   `yaml:"walPath"`
 	MaxEntrySize        int      `yaml:"maxEntrySize"`
 	CrcSize             int      `yaml:"crcSize"`
@@ -98,6 +99,7 @@ type Config struct {
 	CMSPrefix           string   `yaml:"cmsPrefix"`
 	HLLPrefix           string   `yaml:"hllPrefix"`
 	SHPrefix            string   `yaml:"shPrefix"`
+	TBPrefix            string   `yaml:"tbPrefix"`
 	Compression         string   `yaml:"compression"`
 	MapFileName         string   `yaml:"mapFileName"`
 	LSMMaxLevels        int      `yaml:"lsmMaxLevels"`
@@ -122,12 +124,10 @@ func NewConfig(filename string) *Config {
 		config.TokenRefreshTime = TOKEN_REFRESH_TIME
 		config.WalPath = WAL_PATH
 		config.MaxEntrySize = MAX_ENTRY_SIZE
-		config.CrcSize = CRC_SIZE
 		config.TimestampSize = TIMESTAMP_SIZE
 		config.TombstoneSize = TOMBSTONE_SIZE
 		config.KeySizeSize = KEY_SIZE_SIZE
 		config.ValueSizeSize = VALUE_SIZE_SIZE
-		config.CrcStart = CRC_START
 		config.BTreeOrder = B_TREE_ORDER
 		config.SegmentSize = SEGMENT_SIZE
 		config.ScalingFactor = SCALING_FACTOR
@@ -146,6 +146,7 @@ func NewConfig(filename string) *Config {
 		config.CMSPrefix = CMS_PREFIX
 		config.HLLPrefix = HLL_PREFIX
 		config.SHPrefix = SH_PREFIX
+		config.TBPrefix = TB_PREFIX
 		config.Compression = COMPRESSION
 		config.MapFileName = MAP_FILE_PATH
 		config.LSMMaxTables = LSM_MAX_TABLES
@@ -166,12 +167,10 @@ func NewConfig(filename string) *Config {
 		config.CmsEpsilon = CMS_EPSILON
 		config.WalPath = WAL_PATH
 		config.MaxEntrySize = MAX_ENTRY_SIZE
-		config.CrcSize = CRC_SIZE
 		config.TimestampSize = TIMESTAMP_SIZE
 		config.TombstoneSize = TOMBSTONE_SIZE
 		config.KeySizeSize = KEY_SIZE_SIZE
 		config.ValueSizeSize = VALUE_SIZE_SIZE
-		config.CrcStart = CRC_START
 		config.BTreeOrder = B_TREE_ORDER
 		config.ScalingFactor = SCALING_FACTOR
 		config.SSTableSize = SSTABLE_SIZE
@@ -186,6 +185,7 @@ func NewConfig(filename string) *Config {
 		config.CMSPrefix = CMS_PREFIX
 		config.HLLPrefix = HLL_PREFIX
 		config.SHPrefix = SH_PREFIX
+		config.TBPrefix = TB_PREFIX
 		config.MapFileName = MAP_FILE_PATH
 		config.OffsetPath = OFFSET_PATH
 	}
