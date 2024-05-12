@@ -2,7 +2,7 @@ package skip_list
 
 import (
 	"fmt"
-	"github.com/IvanaaXD/NASP---Projekat/structures/record"
+	"github.com/IvanaaXD/NASP/structures/record"
 	"testing"
 )
 

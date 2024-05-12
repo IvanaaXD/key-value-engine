@@ -20,6 +20,7 @@ const (
 	CMS_PREFIX = "___cms___"
 	HLL_PREFIX = "___hll___"
 	SH_PREFIX  = "___sh___"
+	TB_PREFIX  = "___tb___"
 
 	BF_EXPECTED_EL             = 1000  // broj ocekivanih elemenata u bloom filteru
 	BF_FALSE_POSITIVE_RATE     = 0.001 // bloom filter false positive
@@ -69,8 +70,8 @@ type Config struct {
 	MemtableSize        uint     `yaml:"memtableSize"`
 	MemtableNum         uint     `yaml:"memtableNum"`
 	StructureType       string   `yaml:"structureType"`
-	TokenNumber         int      `yaml:"tokenNumber"`
-	TokenRefreshTime    float64  `yaml:"tokenRefreshTime"`
+	TokenNumber         uint16   `yaml:"tokenNumber"`
+	TokenRefreshTime    uint16   `yaml:"tokenRefreshTime"`
 	WalPath             string   `yaml:"walPath"`
 	MaxEntrySize        int      `yaml:"maxEntrySize"`
 	CrcSize             int      `yaml:"crcSize"`
@@ -98,6 +99,7 @@ type Config struct {
 	CMSPrefix           string   `yaml:"cmsPrefix"`
 	HLLPrefix           string   `yaml:"hllPrefix"`
 	SHPrefix            string   `yaml:"shPrefix"`
+	TBPrefix            string   `yaml:"tbPrefix"`
 	Compression         string   `yaml:"compression"`
 	MapFileName         string   `yaml:"mapFileName"`
 	LSMMaxLevels        int      `yaml:"lsmMaxLevels"`
@@ -144,6 +146,7 @@ func NewConfig(filename string) *Config {
 		config.CMSPrefix = CMS_PREFIX
 		config.HLLPrefix = HLL_PREFIX
 		config.SHPrefix = SH_PREFIX
+		config.TBPrefix = TB_PREFIX
 		config.Compression = COMPRESSION
 		config.MapFileName = MAP_FILE_PATH
 		config.LSMMaxTables = LSM_MAX_TABLES
@@ -182,6 +185,7 @@ func NewConfig(filename string) *Config {
 		config.CMSPrefix = CMS_PREFIX
 		config.HLLPrefix = HLL_PREFIX
 		config.SHPrefix = SH_PREFIX
+		config.TBPrefix = TB_PREFIX
 		config.MapFileName = MAP_FILE_PATH
 		config.OffsetPath = OFFSET_PATH
 	}
