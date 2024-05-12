@@ -1,9 +1,13 @@
 package memtable
 
 import (
+	"errors"
 	"fmt"
 	"github.com/IvanaaXD/NASP/app/config"
 	"github.com/IvanaaXD/NASP/structures/record"
+	"github.com/IvanaaXD/NASP/structures/wal"
+	"io"
+	"os"
 	"sort"
 	"time"
 )
@@ -27,33 +31,89 @@ func NewMemtables(config *config.Config) *Memtables {
 	for i := 0; i < int(n); i++ {
 		m := NewMemtable(config, structName)
 		mi.Tables = append(mi.Tables, m)
-
 	}
+
+	exists := CheckWal()
+
+	if exists {
+		err := mi.Recover()
+		if err != nil {
+			return nil
+		}
+	}
+
 	return mi
 }
 
-//func (mi *Memtables) Recover() error {
-//
-//	n := config.GlobalConfig.MemtableSize
-//
-//	for i := 0; i < int(n); i++ {
-//		err := mi.Tables[i].recover()
-//		if mi.Tables[mi.Current].maxSize == mi.Tables[mi.Current].Structure.GetSize() {
-//			mi.Current = (mi.Current + 1) % mi.MaxTables
-//			if mi.Current == mi.Last {
-//				err = mi.Flush()
-//				if err != nil {
-//					fmt.Println("Error flushing: ", err)
-//					return err
-//				}
-//			}
-//		}
-//		if err != nil {
-//			return err
-//		}
-//	}
-//	return nil
-//}
+func CheckWal() bool {
+
+	var found = false
+
+	wall, err := os.Stat(config.GlobalConfig.WalPath)
+	if err != nil {
+		panic(fmt.Sprintf("Log file error: %s", err))
+	}
+
+	if wall.Size() > 0 {
+		found = true
+	}
+
+	return found
+}
+
+// recovering in case of error
+
+func (mi *Memtables) Recover() error {
+
+	n := config.GlobalConfig.MemtableSize
+
+	walFile, err := os.Open(config.GlobalConfig.WalPath)
+	if err != nil {
+		panic(fmt.Sprintf("Log file error: %s", err))
+	}
+
+	for i := 0; i < int(n); i++ {
+		currentMemtable := mi.Tables[i]
+
+		for {
+			rec, err1 := wal.ReadWalRecord(walFile)
+			if err1 == io.EOF {
+				return nil
+			} else if err1 != nil {
+				return err1
+			}
+
+			var success bool
+			if rec.Tombstone {
+				success = currentMemtable.Structure.Delete(rec)
+			} else {
+				success = currentMemtable.Structure.Write(rec)
+			}
+
+			if currentMemtable.maxSize == currentMemtable.Structure.GetSize() {
+				mi.Current = (mi.Current + 1) % mi.MaxTables
+
+			}
+			if !success {
+				return errors.New("recovery fail")
+			}
+		}
+
+		if mi.Tables[mi.Current].maxSize == mi.Tables[mi.Current].Structure.GetSize() {
+			if mi.Current == mi.Last {
+				err = mi.Flush()
+				if err != nil {
+					fmt.Println("Error flushing: ", err)
+					return err
+				}
+			}
+		}
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 func (mi *Memtables) Write(rec record.Record) error {
 
