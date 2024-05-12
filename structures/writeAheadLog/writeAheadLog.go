@@ -3,6 +3,8 @@ package writeaheadlog
 import (
 	"encoding/binary"
 	"fmt"
+	"hash/crc32"
+	"io"
 	"log"
 	"os"
 	"strconv"
@@ -14,13 +16,28 @@ import (
 
 type WriteAheadLog struct {
 	Filename         string
-	SegmentLength    uint64
-	CurrentOffset    uint64
+	SegmentLength    int
+	CurrentOffset    int64
 	NumSavedElements []uint64
 }
 
+const crcLen int = 4
+const timestampLen int = 8
+const tombstoneLen int = 1
+const valuelenLen int = 8
+const keylenLen int = 8
+const walFolderName string = "resources/"
+const NullElementKey string = "NULLELEMENT"
+
+// Konstruktor za WAL
+func InitializeWAL() *WriteAheadLog {
+	config.Init()
+	return &WriteAheadLog{Filename: config.GlobalConfig.WalPath, SegmentLength: config.GlobalConfig.SegmentSize, CurrentOffset: 0, NumSavedElements: make([]uint64, config.GlobalConfig.MemtableNum)}
+}
+
+// wal_0001.log
 // Pomocna funkcija koja menja filename wal-a na sledeci indeks
-func (wal *WriteAheadLog) povecajIndeksFajla() {
+func (wal *WriteAheadLog) increaseFileIndex() {
 	delovi := strings.Split(wal.Filename, "_")
 
 	indeks := strings.Split(delovi[1], ".")
@@ -34,399 +51,184 @@ func (wal *WriteAheadLog) povecajIndeksFajla() {
 	wal.Filename = delovi[0] + "_" + strIndeks + "." + indeks[1]
 }
 
-// Pomocna funkcija koja otvara sledeci fajl i cita podatke iz njega
-func (wal *WriteAheadLog) procitajOverflow(file *os.File, podaci []byte, indeksOffset int) []byte {
-	if file.Name() == wal.Filename {
-		wal.povecajIndeksFajla()
-	}
-	file, err := os.OpenFile(wal.Filename, os.O_RDONLY, 0664)
+func CRC32(data []byte) uint32 {
+	return crc32.ChecksumIEEE(data)
+}
+
+// Pomocna funkcija cita citavu vrednost nekog polja (timestamp, keyLen...)
+func (wal *WriteAheadLog) readNextValue(bytesToRead int, isCRCBeingRead bool) []byte {
+	buffer := make([]byte, bytesToRead)
+
+	file, err := os.OpenFile(wal.Filename, os.O_RDONLY, 0777)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer file.Close()
-	file.Seek(int64(wal.CurrentOffset), 0)
-	bytesRead, err := file.Read(podaci[indeksOffset:])
-	if err != nil {
+
+	file.Seek(wal.CurrentOffset, 0)
+
+	bytesRead, err := file.Read(buffer)
+	if err == io.EOF && isCRCBeingRead {
+		return make([]byte, 0)
+	} else if err != nil {
 		log.Fatal(err)
 	}
-	wal.CurrentOffset += uint64(bytesRead)
-	return podaci
+
+	if bytesRead != bytesToRead {
+		wal.increaseFileIndex()
+		secondFile, err := os.OpenFile(wal.Filename, os.O_RDONLY, 0777)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer secondFile.Close()
+
+		secondBytesRead, err := file.Read(buffer[bytesRead:])
+		if secondBytesRead+bytesRead != bytesToRead {
+			log.Fatal(err)
+		}
+		wal.CurrentOffset = int64(secondBytesRead)
+	} else {
+		wal.CurrentOffset += int64(bytesRead)
+	}
+
+	return buffer
 }
 
-// Pomocna funkcija koja vraca niz bajtova koji odgovara jednom zapisu, i bool vrednost da li je promenjen indeks fajla ili ne
-func (wal *WriteAheadLog) procitajSledeci(file *os.File) ([]byte, bool) {
-	var fileChanged bool = false
+// Funkcija koja ucitava sledeci zapis iz WAL-a. Potrebno proslediti indeks memtabele u koji ce se record upisati
+func (wal *WriteAheadLog) ReadRecord(memtableIndex int) record.Record {
 	allBytes := make([]byte, 0)
 
-	CRCBytes := make([]byte, config.CRC_SIZE)
-	bytesRead, err := file.Read(CRCBytes)
-	if bytesRead == 0 { // Ako nije nista ucitano - nema vise podataka
-		return nil, false
+	crcBytes := wal.readNextValue(crcLen, true)
+	if len(crcBytes) == 0 {
+		return record.Record{Key: NullElementKey, Tombstone: true}
 	}
-	if err != nil && bytesRead != 0 {
-		log.Fatal(err)
-	}
-	wal.CurrentOffset = wal.CurrentOffset + uint64(bytesRead)
-	if uint64(bytesRead) != config.CRC_SIZE {
-		if !fileChanged {
-			wal.CurrentOffset = 0
-		}
-		fileChanged = true
+	crcActual := binary.LittleEndian.Uint32(crcBytes)
 
-		wal.procitajOverflow(file, CRCBytes, bytesRead)
-		// Open a new file, read the bytes you need, set the offset right
-	}
-	allBytes = append(allBytes, CRCBytes...)
-
-	timestampBytes := make([]byte, config.TIMESTAMP_SIZE)
-	bytesRead, err = file.Read(timestampBytes)
-	if err != nil && bytesRead != 0 {
-		log.Fatal(err)
-	}
-	wal.CurrentOffset = wal.CurrentOffset + uint64(bytesRead)
-	if uint64(bytesRead) != config.TIMESTAMP_SIZE {
-		if !fileChanged {
-			wal.CurrentOffset = 0
-		}
-		fileChanged = true
-
-		wal.procitajOverflow(file, timestampBytes, bytesRead)
-		// Open a new file, read the bytes you need, set the offset right
-	}
+	timestampBytes := wal.readNextValue(timestampLen, false)
 	allBytes = append(allBytes, timestampBytes...)
 
-	tombstoneBytes := make([]byte, config.TOMBSTONE_SIZE)
-	bytesRead, err = file.Read(tombstoneBytes)
-	if err != nil && bytesRead != 0 {
-		log.Fatal(err)
-	}
-	wal.CurrentOffset = wal.CurrentOffset + uint64(bytesRead)
-	if uint64(bytesRead) != config.TOMBSTONE_SIZE {
-		if !fileChanged {
-			wal.CurrentOffset = 0
-		}
-		fileChanged = true
+	tombstoneByte := wal.readNextValue(tombstoneLen, false)
+	allBytes = append(allBytes, tombstoneByte...)
 
-		wal.procitajOverflow(file, tombstoneBytes, bytesRead)
-		// Open a new file, read the bytes you need, set the offset right
-	}
-	allBytes = append(allBytes, tombstoneBytes...)
+	keyLenBytes := wal.readNextValue(keylenLen, false)
+	allBytes = append(allBytes, keyLenBytes...)
+	keyLenActual := binary.LittleEndian.Uint64(keyLenBytes)
 
-	keySizeBytes := make([]byte, config.KEY_SIZE_SIZE)
-	bytesRead, err = file.Read(keySizeBytes)
-	if err != nil && bytesRead != 0 {
-		log.Fatal(err)
-	}
-	wal.CurrentOffset = wal.CurrentOffset + uint64(bytesRead)
-	if uint64(bytesRead) != config.KEY_SIZE_SIZE {
-		if !fileChanged {
-			wal.CurrentOffset = 0
-		}
-		fileChanged = true
+	valueLenBytes := wal.readNextValue(valuelenLen, false)
+	allBytes = append(allBytes, valueLenBytes...)
+	valueLenActual := binary.LittleEndian.Uint64(valueLenBytes)
 
-		wal.procitajOverflow(file, keySizeBytes, bytesRead)
-		// Open a new file, read the bytes you need, set the offset right
-	}
-	allBytes = append(allBytes, keySizeBytes...)
-
-	valueSizeBytes := make([]byte, config.VALUE_SIZE_SIZE)
-	bytesRead, err = file.Read(valueSizeBytes)
-	if err != nil && bytesRead != 0 {
-		log.Fatal(err)
-	}
-	wal.CurrentOffset = wal.CurrentOffset + uint64(bytesRead)
-	if uint64(bytesRead) != config.VALUE_SIZE_SIZE {
-		if !fileChanged {
-			wal.CurrentOffset = 0
-		}
-		fileChanged = true
-
-		wal.procitajOverflow(file, valueSizeBytes, bytesRead)
-		// Open a new file, read the bytes you need, set the offset right
-	}
-	allBytes = append(allBytes, valueSizeBytes...)
-
-	keyLength := binary.BigEndian.Uint64(keySizeBytes)
-	keyBytes := make([]byte, keyLength)
-	bytesRead, err = file.Read(keyBytes)
-	if err != nil && bytesRead != 0 {
-		log.Fatal(err)
-	}
-	wal.CurrentOffset = wal.CurrentOffset + uint64(bytesRead)
-	if uint64(bytesRead) != keyLength {
-		if !fileChanged {
-			wal.CurrentOffset = 0
-		}
-		fileChanged = true
-
-		wal.procitajOverflow(file, keyBytes, bytesRead)
-		// Open a new file, read the bytes you need, set the offset right
-	}
+	keyBytes := wal.readNextValue(int(keyLenActual), false)
 	allBytes = append(allBytes, keyBytes...)
 
-	valueLength := binary.BigEndian.Uint64(valueSizeBytes)
-	valueBytes := make([]byte, valueLength)
-	bytesRead, err = file.Read(valueBytes)
-	if err != nil && bytesRead != 0 {
-		log.Fatal(err)
-	}
-	wal.CurrentOffset = wal.CurrentOffset + uint64(bytesRead)
-	if uint64(bytesRead) != valueLength {
-		if !fileChanged {
-			wal.CurrentOffset = 0
-		}
-		fileChanged = true
-
-		wal.procitajOverflow(file, valueBytes, bytesRead)
-		// Open a new file, read the bytes you need, set the offset right
-	}
+	valueBytes := wal.readNextValue(int(valueLenActual), false)
 	allBytes = append(allBytes, valueBytes...)
 
-	return allBytes, fileChanged
+	if crcActual != CRC32(allBytes) {
+		fmt.Println("OPREZ! Moguce je da su podaci iz WAL-a nevalidni!")
+	}
+
+	wal.NumSavedElements[memtableIndex] += 1
+
+	return record.BytesToRec(allBytes)
 }
 
-// Pomocna funkcija koja radi isto sto i UcitajSve(), samo sto ne stavlja offset na 0
-func (wal *WriteAheadLog) ucitajSvePomocna() []record.Record {
-	allElements := make([]record.Record, 0)
-
-	_, err := os.Stat(wal.Filename) // Provera da li postoji ikakav log
-	if os.IsNotExist(err) {
-		return allElements
-	}
-
-	file, err := os.OpenFile(wal.Filename, os.O_RDONLY, 0664)
-	if err != nil {
-		log.Fatal(err)
-	}
-	file.Seek(int64(wal.CurrentOffset), 0)
-
-	for { // go sintaksa za while true
-		podaci, fileChanged := wal.procitajSledeci(file)
-		if podaci == nil { // Ako nista nije ucitano, to je to
-			file.Close()
-			break
-		}
-		konvertovano := record.BytesToRecord(podaci)
-		if fileChanged {
-			file.Close()
-			file, err = os.OpenFile(wal.Filename, os.O_RDONLY|os.O_CREATE, 0664)
-			if err != nil {
-				log.Fatal(err)
-			}
-			file.Seek(int64(wal.CurrentOffset), 0)
-		}
-		allElements = append(allElements, konvertovano)
-	}
-
-	return allElements
-}
-
-// Funkcija ucitava sve elemente trenutno upisane u write ahead log i vraca niz svih njih
-func (wal *WriteAheadLog) UcitajSve() []record.Record {
-	allElements := make([]record.Record, 0)
-
-	_, err := os.Stat("./wal/")
-	if os.IsNotExist(err) {
-		if err := os.Mkdir("wal", os.ModePerm); err != nil {
-			log.Fatal(err)
-		}
-	}
-
-	fajlovi, err := os.ReadDir("./wal/")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if len(fajlovi) < 1 {
-		wal.Filename = "./wal/wal_0001.log"
-	} else {
-		wal.Filename = "./wal/" + fajlovi[0].Name() // stavi da je filename prvi fajl
-	}
-
-	wal.CurrentOffset = 0
-
-	_, err = os.Stat(wal.Filename) // Provera da li postoji ikakav log
-	if os.IsNotExist(err) {
-		return allElements
-	}
-
-	file, err := os.OpenFile(wal.Filename, os.O_RDONLY, 0664)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	wal.CurrentOffset = 0
-
-	for { // go sintaksa za while true
-		podaci, fileChanged := wal.procitajSledeci(file)
-		if podaci == nil { // Ako nista nije ucitano, to je to
-			file.Close()
-			break
-		}
-		konvertovano := record.BytesToRecord(podaci)
-		if fileChanged {
-			file.Close()
-			file, err = os.OpenFile(wal.Filename, os.O_RDONLY|os.O_CREATE, 0664)
-			if err != nil {
-				log.Fatal(err)
-			}
-			file.Seek(int64(wal.CurrentOffset), 0)
-		}
-		allElements = append(allElements, konvertovano)
-	}
-
-	return allElements
-}
-
-// Pomocna funkcija pri brisanju delova wal-a. Radi isto sto i dodaj zapis, osim azuriranja broja sacuvanih elemenata po memtabeli
-func (wal *WriteAheadLog) dodajZapisPomocna(element record.Record) {
-	file, err := os.OpenFile(wal.Filename, os.O_APPEND|os.O_CREATE, 0664)
+// Funkcija koja upisuje prosledjeni zapis u WAL. Potrebno takodje proslediti indeks memtabele u koji je record bio upisan
+func (wal *WriteAheadLog) WriteRecord(inputRecord record.Record, memtableIndex int) {
+	// TO-DO
+	file, err := os.OpenFile(wal.Filename, os.O_APPEND|os.O_CREATE, 0777)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer file.Close()
 
-	fileStats, err := file.Stat()
-	if err != nil {
-		log.Fatal(err)
-	}
+	recordBytes := record.RecToBytes(inputRecord)
+	recordCRC := CRC32(recordBytes)
+	allBytes := make([]byte, crcLen)
+	binary.LittleEndian.PutUint32(allBytes, recordCRC)
+	allBytes = append(allBytes, recordBytes...)
 
-	wal.CurrentOffset = uint64(fileStats.Size())
-	serijalizovanElement := element.Serijalizuj()
-	slobodnoMesta := int(wal.SegmentLength) - int(wal.CurrentOffset)
-	if len(serijalizovanElement) <= slobodnoMesta {
-		_, err = file.Write(serijalizovanElement)
+	freeSpace := wal.SegmentLength - int(wal.CurrentOffset)
+	if freeSpace >= len(allBytes) {
+		_, err = file.Write(allBytes)
 		if err != nil {
 			log.Fatal(err)
 		}
-		wal.CurrentOffset += uint64(len(serijalizovanElement))
+		wal.CurrentOffset += int64(len(allBytes))
 	} else {
-		deo1 := serijalizovanElement[:slobodnoMesta]
-		deo2 := serijalizovanElement[slobodnoMesta:]
+		part1 := allBytes[:freeSpace]
+		part2 := allBytes[freeSpace:]
 
-		_, err = file.Write(deo1)
+		_, err = file.Write(part1)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		wal.povecajIndeksFajla()
+		wal.increaseFileIndex()
 
-		file2, err := os.OpenFile(wal.Filename, os.O_APPEND|os.O_CREATE, 0644)
+		file2, err := os.OpenFile(wal.Filename, os.O_APPEND|os.O_CREATE, 0777)
 		if err != nil {
 			log.Fatal(err)
 		}
 		defer file2.Close()
 
-		_, err2 := file2.Write(deo2)
-		if err2 != nil {
+		_, err = file2.Write(part2)
+		if err != nil {
 			log.Fatal(err)
 		}
-		wal.CurrentOffset = uint64(len(deo2))
+		wal.CurrentOffset = int64(len(part2))
 	}
+	wal.NumSavedElements[memtableIndex] += 1
 }
 
-// Funkcija dodaje zapis u write ahead log
-func (wal *WriteAheadLog) DodajZapis(element record.Record, indeksMemtabele int, sstableCreated bool) {
-	file, err := os.OpenFile(wal.Filename, os.O_APPEND|os.O_CREATE, 0664)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer file.Close()
-
-	fileStats, err := file.Stat()
+// Funkcija koja brise serializovane zapise iz WAL-a. Potrebno je proslediti indeks memtabele koja se flushovala
+func (wal *WriteAheadLog) DeleteSerializedRecords(memtableIndex int) {
+	allFilesBeforeDeletion, err := os.ReadDir(walFolderName)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	wal.CurrentOffset = uint64(fileStats.Size())
-	serijalizovanElement := element.Serijalizuj()
-	slobodnoMesta := int(wal.SegmentLength) - int(wal.CurrentOffset)
-	if len(serijalizovanElement) <= slobodnoMesta {
-		_, err = file.Write(serijalizovanElement)
-		if err != nil {
-			log.Fatal(err)
-		}
-		wal.CurrentOffset += uint64(len(serijalizovanElement))
-	} else {
-		deo1 := serijalizovanElement[:slobodnoMesta]
-		deo2 := serijalizovanElement[slobodnoMesta:]
+	deleterWal := InitializeWAL()
+	elementsToDelete := wal.NumSavedElements[memtableIndex]
 
-		_, err = file.Write(deo1)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		wal.povecajIndeksFajla()
-
-		file2, err := os.OpenFile(wal.Filename, os.O_APPEND|os.O_CREATE, 0644)
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer file2.Close()
-
-		_, err2 := file2.Write(deo2)
-		if err2 != nil {
-			log.Fatal(err)
-		}
-		wal.CurrentOffset = uint64(len(deo2))
-	}
-
-	if sstableCreated {
-		indeksMemtabele = len(wal.NumSavedElements) - 1
-	}
-	wal.NumSavedElements[indeksMemtabele] += 1
-}
-
-// Funkcija koja brise serijalizovani deo WAL-a (pokrece se pri pravljenju SSTabele)
-func (wal *WriteAheadLog) IzbrisiSerijalizovano() {
-	fajlovi, err := os.ReadDir("./wal/")
-	if err != nil {
-		log.Fatal(err)
-	}
-	wal.Filename = "./wal/" + fajlovi[0].Name() // stavi da je filename prvi fajl
-	wal.CurrentOffset = 0
-
-	file, err := os.OpenFile(wal.Filename, os.O_RDONLY, 0664)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// preskoci sve serijalizovane elemente
-	elementsToDelete := wal.NumSavedElements[0]
 	for i := 0; i < int(elementsToDelete); i++ {
-		_, fileChanged := wal.procitajSledeci(file)
-		if fileChanged {
-			file.Close()
-			file, err = os.OpenFile(wal.Filename, os.O_RDONLY|os.O_CREATE, 0664)
-			if err != nil {
-				log.Fatal(err)
-			}
-			file.Seek(int64(wal.CurrentOffset), 0)
+		deleterWal.ReadRecord(0)
+	}
+
+	remainingLoggedRecords := make([]record.Record, 0)
+	for {
+		loggedRecord := deleterWal.ReadRecord(0)
+		if loggedRecord.Tombstone && loggedRecord.Key == "NULLELEMENT" {
+			break
+		}
+		remainingLoggedRecords = append(remainingLoggedRecords, loggedRecord)
+	}
+
+	allLogs := make([]string, 0)
+	for _, logName := range allFilesBeforeDeletion {
+		if strings.Contains(logName.Name(), ".log") {
+			allLogs = append(allLogs, logName.Name())
 		}
 	}
 
-	file.Close()
-
-	// ucitaj sve neserijalizovane elemente
-	elementiZaCuvanje := wal.ucitajSvePomocna()
-	fmt.Println(len(elementiZaCuvanje))
-	// izbrisi svaki wal zapis
-	for _, fajlZaBris := range fajlovi {
-		os.Remove("./wal/" + fajlZaBris.Name())
+	for _, logForDeletion := range allLogs {
+		os.Remove(walFolderName + logForDeletion)
 	}
 
-	// dodaj sve elemente ponovo
-	wal.Filename = "./wal/" + fajlovi[0].Name()
-	for _, elementZaUpis := range elementiZaCuvanje {
-		wal.dodajZapisPomocna(elementZaUpis)
-	}
-	wal.Filename = "./wal/" + fajlovi[0].Name() // stavi da je filename prvi fajl
-	wal.CurrentOffset = 0
-	if len(wal.NumSavedElements) > 1 {
-		wal.NumSavedElements = append(wal.NumSavedElements[1:], 0)
-	} else {
-		wal.NumSavedElements[0] = 0
+	deleterWal = InitializeWAL()
+	for _, record := range remainingLoggedRecords {
+		deleterWal.WriteRecord(record, 0)
 	}
 
-	wal.UcitajSve() // postavlja se na zadnji fajl i na pravilan offset
+	allFilesAfterDeletion, err := os.ReadDir(walFolderName)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	wal.Filename = walFolderName + allFilesAfterDeletion[len(allFilesAfterDeletion)-1].Name()
+	lastFileInfo, err := os.Stat(wal.Filename)
+	if err != nil {
+		log.Fatal(err)
+	}
+	wal.CurrentOffset = lastFileInfo.Size()
 }

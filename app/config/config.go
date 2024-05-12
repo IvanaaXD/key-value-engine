@@ -3,10 +3,11 @@ package config
 import (
 	"errors"
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"os"
 	"path/filepath"
 	"runtime"
+
+	"gopkg.in/yaml.v3"
 )
 
 var GlobalConfig Config
@@ -36,7 +37,7 @@ const (
 	TOKEN_REFRESH_TIME         = 2
 	MAX_ENTRY_SIZE             = 1024
 	COMPRESSION_DICT_FILE_PATH = "resources/compression_dict.dat"
-	WAL_PATH                   = "resources/wal.log"
+	WAL_PATH                   = "resources/wal_0001.log"
 	SCALING_FACTOR             = 2
 	COMPACTION_ALGORITHM       = "sizeTiered"
 	SEGMENT_SIZE               = 256
