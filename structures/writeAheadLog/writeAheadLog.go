@@ -230,4 +230,5 @@ func (wal *WriteAheadLog) DeleteSerializedRecords(memtableIndex int) {
 		log.Fatal(err)
 	}
 	wal.CurrentOffset = lastFileInfo.Size()
+	wal.NumSavedElements[memtableIndex] = 0
 }
