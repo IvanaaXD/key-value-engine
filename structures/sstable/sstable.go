@@ -344,6 +344,8 @@ func (sstable *SSTableInstance) ReadRecord() rec.Record {
 }
 
 // Funkcija upisuje prosledjen record na sledece mesto u SSTabeli. Koristice se za LSM
+// AKO JE SINGLE FILE SSTABELA, DODAJE SE SAMO U BLOOMFILTER I DATA DEO!!!
+// AKO JE MULTI FILE SSTABELA, DODAJE SE U SVE!!!
 func (sstable *SSTableCreator) WriteRecord(record rec.Record) {
 	config.Init()
 
@@ -352,7 +354,26 @@ func (sstable *SSTableCreator) WriteRecord(record rec.Record) {
 	}
 
 	if sstable.Instance.isSingleFile {
-		// TO-DO: pisi data na jedno, index na drugo, summary na trece mesto u istom fajlu itd
+		// TO-DO: dodaj na data i upisi u bloomfilter
+		file, err := os.OpenFile(sstable.Instance.filename, os.O_RDWR, 0777)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer file.Close()
+		// TO-DO: Bloomfilter
+		{
+			file.Seek(sstable.Instance.bloomfilterBeginOffset, 0)
+			// deserialize bloomfilter
+			// add element to bloomfilter
+			// serialize bloomfilter
+			file.Seek(sstable.Instance.bloomfilterBeginOffset, 0)
+			// write the bloomfilter back in
+		}
+		// Data
+		{
+			file.Seek(0, 2)
+			file.Write(RecordToSSTableRecord(record))
+		}
 	} else {
 		// Bloomfilter
 		{
