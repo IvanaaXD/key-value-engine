@@ -2,7 +2,7 @@ package io
 
 import (
 	"github.com/IvanaaXD/NASP/app/config"
-	"github.com/IvanaaXD/NASP/init"
+	"github.com/IvanaaXD/NASP/inicialize"
 	"github.com/IvanaaXD/NASP/structures/record"
 	"os"
 	"sort"
@@ -10,12 +10,12 @@ import (
 
 func Get(key string) (record.Record, bool) {
 
-	rec, _, exists := init.Memtables.Read(key)
+	rec, _, exists := inicialize.Memtables.Read(key)
 	if exists {
 		return rec, true
 	}
 
-	rec, exists = init.Cache.Find(key)
+	rec, exists = inicialize.Cache.Find(key)
 	if exists {
 		return rec, true
 	}
@@ -65,7 +65,7 @@ func Get(key string) (record.Record, bool) {
 }
 
 func PrefixScan(key string) []record.Record {
-	memtableRecords := init.Memtables.PrefixScan(key)
+	memtableRecords := inicialize.Memtables.PrefixScan(key)
 	// sstableRecords := sstable.PrefixScanAll(key)
 
 	var result []record.Record
@@ -100,7 +100,7 @@ func PrefixScan(key string) []record.Record {
 }
 
 func RangeScan(start, end string) []record.Record {
-	memtableRecords := init.Memtables.RangeScan(start, end)
+	memtableRecords := inicialize.Memtables.RangeScan(start, end)
 	// sstableRecords := sstable.RangeScanAll(start, end)
 
 	var result []record.Record
