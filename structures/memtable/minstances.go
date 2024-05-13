@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"github.com/IvanaaXD/NASP/app/config"
 	"github.com/IvanaaXD/NASP/structures/record"
-	"github.com/IvanaaXD/NASP/structures/wal"
-	"io"
+	"github.com/IvanaaXD/NASP/structures/writeAheadLog"
 	"os"
 	"sort"
 	"time"
 )
+
+const NullElementKey string = "NULLELEMENT"
 
 type Memtables struct {
 	Current   int
@@ -65,53 +66,36 @@ func CheckWal() bool {
 
 func (mi *Memtables) Recover() error {
 
-	n := config.GlobalConfig.MemtableSize
+	var i = 0
+	currentMemtable := mi.Tables[i]
 
-	walFile, err := os.Open(config.GlobalConfig.WalPath)
-	if err != nil {
-		panic(fmt.Sprintf("Log file error: %s", err))
-	}
+	wal := writeaheadlog.InitializeWAL()
 
-	for i := 0; i < int(n); i++ {
-		currentMemtable := mi.Tables[i]
+	for {
+		rec := wal.ReadRecord(i)
 
-		for {
-			rec, err1 := wal.ReadWalRecord(walFile)
-			if err1 == io.EOF {
-				return nil
-			} else if err1 != nil {
-				return err1
-			}
-
-			var success bool
-			if rec.Tombstone {
-				success = currentMemtable.Structure.Delete(rec)
-			} else {
-				success = currentMemtable.Structure.Write(rec)
-			}
-
-			if currentMemtable.maxSize == currentMemtable.Structure.GetSize() {
-				mi.Current = (mi.Current + 1) % mi.MaxTables
-
-			}
-			if !success {
-				return errors.New("recovery fail")
-			}
+		recc := record.Record{Key: NullElementKey, Tombstone: true}
+		if rec.Key == recc.Key {
+			break
 		}
 
-		if mi.Tables[mi.Current].maxSize == mi.Tables[mi.Current].Structure.GetSize() {
-			if mi.Current == mi.Last {
-				err = mi.Flush()
-				if err != nil {
-					fmt.Println("Error flushing: ", err)
-					return err
-				}
-			}
+		if currentMemtable.maxSize == currentMemtable.Structure.GetSize() {
+			i++
+			currentMemtable = mi.Tables[i]
 		}
-		if err != nil {
-			return err
+
+		var success bool
+		if rec.Tombstone {
+			success = currentMemtable.Structure.Delete(rec)
+		} else {
+			success = currentMemtable.Structure.Write(rec)
+		}
+
+		if !success {
+			return errors.New("recovery fail")
 		}
 	}
+
 	return nil
 }
 

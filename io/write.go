@@ -4,7 +4,7 @@ import (
 	"github.com/IvanaaXD/NASP/app/config"
 	"github.com/IvanaaXD/NASP/init"
 	"github.com/IvanaaXD/NASP/structures/record"
-	"github.com/IvanaaXD/NASP/structures/writeAheadLog"
+	"github.com/IvanaaXD/NASP/structures/wal"
 )
 
 // PUT (Novi slog / azuriranje sloga)
@@ -12,7 +12,7 @@ import (
 func Put(key string, value []byte, timestamp int64) bool {
 	tombstone := false
 
-	log, err := writeaheadlog.WriteAheadLog{config.GlobalConfig.WalPath}
+	log, err := wal.NewWAL(config.GlobalConfig.WalPath)
 	if err != nil {
 		return false
 	}
@@ -26,12 +26,15 @@ func Put(key string, value []byte, timestamp int64) bool {
 	rec := record.Record{Key: key, Value: value, Timestamp: timestamp, Tombstone: tombstone}
 
 	err = init.Memtables.Write(rec)
-	//id := NASP.Memtables.Current
-	//wal.WriteOffsets(id, lenOfRec)
-	//
-	//if err != nil {
-	//	return false
-	//}
+	id := init.Memtables.Current
+	err = wal.WriteOffsets(id, lenOfRec)
+	if err != nil {
+		return false
+	}
+
+	if err != nil {
+		return false
+	}
 
 	return true
 }

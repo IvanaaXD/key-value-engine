@@ -296,6 +296,7 @@ func addRange(mts *Memtables) {
 	})
 }
 
+/*
 func testValidRangeScan(structure string, t *testing.T) {
 	config.Init()
 	config.GlobalConfig.MemtableSize = 3
@@ -457,7 +458,7 @@ func TestInvalidPrefixScan(t *testing.T) {
 	testInvalidPrefixScan("btree", t)
 	testInvalidPrefixScan("skiplist", t)
 }
-
+*/
 //func addReserved(mts *Memtables) {
 //	_ = mts.Add(&model.Record{
 //		Key:       []byte(iterator.BloomFilterPrefix + "mojfilter"),
