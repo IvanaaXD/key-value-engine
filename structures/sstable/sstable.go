@@ -6,9 +6,12 @@ import (
 	"hash/crc32"
 	"log"
 	"os"
+	"strconv"
+	"strings"
 
 	"github.com/IvanaaXD/NASP/app/config"
 	bf "github.com/IvanaaXD/NASP/structures/bloom-filter"
+	compress "github.com/IvanaaXD/NASP/structures/compression_dict"
 	rec "github.com/IvanaaXD/NASP/structures/record"
 )
 
@@ -35,7 +38,6 @@ type SSTableCreator struct {
 }
 
 // Notes
-// Potencijalno moguce napraviti da RecordToSSTableRecord bude samo jedna funkcija
 // Potencijalno dobro staviti firstSummaryElement, lastSummaryElement, firstIndexElement, lastIndexElement u metadata
 // mozda jos neke druge stvari kao dataBegin, merkleBegin itd.
 // Potencijalno dobro da SSTableInstance cuva vise offsetova
@@ -45,7 +47,17 @@ const tombstoneFalse byte = 0
 const sstableFolderPath string = "./resources/sstables"
 const newSSTablePath string = "./resources/sstables/0001sstable0001"
 const FirstOrLastElement uint32 = 9999999
-const singleFilemetaLength uint16 = 57
+const singleFileMetaLength uint16 = 57
+const metaIsCompressedLength uint16 = 1
+const metaAnyOffsetLength uint16 = 8
+
+const metaBloomfilterBeginOffset int64 = 1
+const metaDataBeginOffset int64 = 9
+const metaIndexBeginOffset int64 = 17
+const metaIndexLastElementOffset int64 = 25
+const metaSummaryBeginOffset int64 = 33
+const metaSummaryLastElementOffset int64 = 41
+const metaMerkleBeginOffset int64 = 49
 
 func CRC32(data []byte) uint32 {
 	return crc32.ChecksumIEEE(data)
@@ -53,6 +65,10 @@ func CRC32(data []byte) uint32 {
 
 // Funkcija pretvara Record u zapis za SSTabelu BEZ KOMPRESIJE (public funkcija zbog LSM)
 func RecordToSSTableRecord(inputRecord rec.Record) []byte {
+	config.Init()
+	compressionDictionary := compress.NewCompressionDict()
+	compressionDictionary.ReadFromFile()
+
 	ssRecordBytes := make([]byte, 0)
 	normalRecordBytes := rec.RecToBytes(inputRecord)
 	crcValue := CRC32(normalRecordBytes)
@@ -73,8 +89,18 @@ func RecordToSSTableRecord(inputRecord rec.Record) []byte {
 	ssRecordBytes = append(ssRecordBytes, tombstoneByte)
 
 	keySizeBytes := make([]byte, 8)
-	writtenBytes = binary.PutUvarint(keySizeBytes, uint64(len(inputRecord.Key)))
-	ssRecordBytes = append(ssRecordBytes, keySizeBytes[:writtenBytes]...)
+
+	if config.COMPRESSION == "no" {
+		writtenBytes = binary.PutUvarint(keySizeBytes, uint64(len(inputRecord.Key)))
+		ssRecordBytes = append(ssRecordBytes, keySizeBytes[:writtenBytes]...)
+	} else {
+		compressionDictionary.Write(inputRecord.Key)
+		compressedKey, _ := compressionDictionary.GetId(inputRecord.Key)
+		keyTemp := make([]byte, 100)
+		writtenBytes = binary.PutUvarint(keyTemp, compressedKey)
+		actualWrittenBytes := binary.PutUvarint(keySizeBytes, uint64(writtenBytes))
+		ssRecordBytes = append(ssRecordBytes, keySizeBytes[:actualWrittenBytes]...)
+	}
 
 	if !inputRecord.Tombstone {
 		// Ako nije obrisan, serijalizovati i value size
@@ -83,20 +109,21 @@ func RecordToSSTableRecord(inputRecord rec.Record) []byte {
 		ssRecordBytes = append(ssRecordBytes, valueSizeBytes[:writtenBytes]...)
 	}
 
-	keyBytes := []byte(inputRecord.Key)
-	ssRecordBytes = append(ssRecordBytes, keyBytes...)
+	if config.COMPRESSION == "no" {
+		keyBytes := []byte(inputRecord.Key)
+		ssRecordBytes = append(ssRecordBytes, keyBytes...)
+	} else {
+		compressedKey, _ := compressionDictionary.GetId(inputRecord.Key)
+		compKeyBytes := make([]byte, 8)
+		writtenBytes = binary.PutUvarint(compKeyBytes, compressedKey)
+		ssRecordBytes = append(ssRecordBytes, compKeyBytes[:writtenBytes]...)
+	}
 
 	if !inputRecord.Tombstone {
 		// Ako nije obrisan, serijalizovati i value
 		ssRecordBytes = append(ssRecordBytes, inputRecord.Value...)
 	}
 	return ssRecordBytes
-}
-
-// Funkcija pretvara Record u zapis za SSTabelu SA KOMPRESIJOM (public funkcija zbog LSM)
-func RecordToCompressedSSTableRecord(inputRecord rec.Record) []byte {
-	// TO-DO: kompresovan kljuc i to, ali mozda moguce i u prethodnoj funkciji
-	return make([]byte, 0)
 }
 
 // Pomocna funkcija deserijalizuje bloomfilter od datih bajtova i proverava da li se dati kljuc nalazi u njemu.
@@ -169,7 +196,46 @@ func SSTableGet(key string) (rec.Record, bool) {
 
 // Pomocna funkcija povecava sve indekse SSTabeli na nekom LSM nivou za 1
 func updateSSTableNames(lsmLevel int) {
-	// TO-DO: azuriranje imena
+	pathsToChange := make([]string, 0)
+	pathIsDir := make([]bool, 0)
+	// Ucitaj imena svih sstabela
+	sstablePaths, err := os.ReadDir(sstableFolderPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, path := range sstablePaths {
+		// podeli "XXXXsstableYYYY[.bin]"
+		splitPath := strings.Split(path.Name(), "sstable")
+		if splitPath[0] != "0001" {
+			// ako nije LSM nivo 1, ne preimenuj vise nista
+			break
+		}
+		// dodaj ga u listu za promenu naziva ako jeste
+		pathsToChange = append(pathsToChange, path.Name())
+		pathIsDir = append(pathIsDir, path.IsDir())
+	}
+
+	// iteriraj u obrnutom redosledu (da ne bi doslo do errora)
+	for i := len(pathsToChange) - 1; i >= 0; i-- {
+		// podeli "XXXXsstableYYYY[.bin]"
+		splitPath := strings.Split(pathsToChange[i], "sstable")
+		// uzmi YYYY
+		oldIndex := splitPath[1][:4]
+		// pretvori indeks u broj i povecaj ga za jedan
+		oldIndexNumber, _ := strconv.Atoi(oldIndex)
+		newIndexNumber := oldIndexNumber + 1
+		newIndex := fmt.Sprintf("%04d", newIndexNumber)
+		// napravi novi ceo path sa novim indeksom
+		newPath := sstableFolderPath + "/0001sstable" + newIndex
+		if !pathIsDir[i] {
+			// dodaj jos ".bin" ako je bio u pitanju singleFile
+			newPath += ".bin"
+		}
+
+		// preimenuj ga
+		os.Rename(sstableFolderPath+"/"+pathsToChange[i], newPath)
+	}
 }
 
 // Pomocna funkcija pravi novu SSTabelu koja je takodje i najnovija, 0001sstable0001
@@ -196,7 +262,13 @@ func CreateNewSSTable(records []rec.Record) {
 	updateSSTableNames(1)
 	newCreator := SSTableCreator{Instance: *newSSTableInstance, currentIndexNumber: 0, currentSummaryNumber: 0}
 	if config.GlobalConfig.SSTFiles == "one" {
-		// TO-DO: Napraviti SSTabelu u jednom fajlu
+		for _, record := range records {
+			newCreator.WriteRecord(record)
+		}
+		// TO-DO: Dodati summary u kreiranu SSTabelu
+		// TO-DO: Dodati index u kreiranu SSTabelu
+		// TO-DO: Napraviti merkle stablo
+
 	} else {
 		for index, record := range records {
 			if index == 0 || index == len(records)-1 {
@@ -227,6 +299,7 @@ func OpenSSTable(filename string) SSTableInstance {
 	var summaryOffset int64 = 0
 	var summaryLastElemOffset int64 = 0
 	var merkleOffset int64 = 0
+	var bloomOffset int64 = 0
 	actualPath := sstableFolderPath + "/" + filename
 	_, err := os.Stat(actualPath)
 	if err == os.ErrNotExist {
@@ -239,7 +312,22 @@ func OpenSSTable(filename string) SSTableInstance {
 	}
 
 	if singlefile {
-		// TO-DO: Citanje meta podataka jednog fajla
+		file, err := os.OpenFile(actualPath, os.O_RDONLY, 0777)
+		if err != nil {
+			log.Fatal(err)
+		}
+		metaBytes := make([]byte, singleFileMetaLength)
+		file.Read(metaBytes)
+		if metaBytes[0] == 255 {
+			compression = true
+		}
+		bloomOffset = int64(binary.LittleEndian.Uint64(metaBytes[1:9]))
+		dataOffset = int64(binary.LittleEndian.Uint64(metaBytes[9:17]))
+		indexOffset = int64(binary.LittleEndian.Uint64(metaBytes[17:25]))
+		indexLastElemOffset = int64(binary.LittleEndian.Uint64(metaBytes[25:33]))
+		summaryOffset = int64(binary.LittleEndian.Uint64(metaBytes[33:41]))
+		summaryLastElemOffset = int64(binary.LittleEndian.Uint64(metaBytes[41:49]))
+		merkleOffset = int64(binary.LittleEndian.Uint64(metaBytes[49:]))
 	} else {
 		file, err := os.OpenFile(actualPath+"/meta.bin", os.O_RDONLY, 0777)
 		if err != nil {
@@ -255,7 +343,7 @@ func OpenSSTable(filename string) SSTableInstance {
 	}
 	return SSTableInstance{filename: actualPath, currentOffset: 0, isSingleFile: singlefile, isCompressed: compression,
 		indexBeginOffset: indexOffset, indexLastElementOffset: indexLastElemOffset, summaryBeginOffset: summaryOffset, summaryLastElementOffset: summaryLastElemOffset,
-		dataBeginOffset: dataOffset, merkleBeginOffset: merkleOffset}
+		dataBeginOffset: dataOffset, merkleBeginOffset: merkleOffset, bloomfilterBeginOffset: bloomOffset}
 }
 
 // Pomocna funkcija koja cita jednu variable-encoded vrednost
@@ -284,7 +372,8 @@ func (sstable *SSTableInstance) ReadRecord() rec.Record {
 	var keyLengthActual uint64
 	var valueLengthActual uint64 = 0
 	var key string
-	var value []byte = make([]byte, 0)
+	var value []byte
+
 	if sstable.isSingleFile {
 		dataPath := sstable.filename
 		file, err = os.OpenFile(dataPath, os.O_RDONLY, 0777)
@@ -314,6 +403,7 @@ func (sstable *SSTableInstance) ReadRecord() rec.Record {
 	} else {
 		tombstoneActual = false
 	}
+	sstable.currentOffset += 1
 
 	keyLengthBytes := sstable.readValue(file)
 	keyLengthActual, _ = binary.Uvarint(keyLengthBytes)
@@ -323,17 +413,25 @@ func (sstable *SSTableInstance) ReadRecord() rec.Record {
 		valueLengthActual, _ = binary.Uvarint(valueLengthBytes)
 	}
 
+	var keyBytes []byte
 	if sstable.isCompressed {
-		// TO-DO: read compressed
+		dict := compress.NewCompressionDict()
+		dict.ReadFromFile()
+		keyBytes = make([]byte, keyLengthActual)
+		file.Read(keyBytes)
+		key, _ = dict.GetKey(binary.LittleEndian.Uint64(keyBytes))
+
 	} else {
-		keyBytes := make([]byte, keyLengthActual)
+		keyBytes = make([]byte, keyLengthActual)
 		file.Read(keyBytes)
 		key = string(keyBytes)
 	}
+	sstable.currentOffset += int64(len(keyBytes))
 
 	if !tombstoneActual {
 		value = make([]byte, valueLengthActual)
 		file.Read(value)
+		sstable.currentOffset += int64(len(value))
 	}
 	recordActual := rec.Record{Key: key, Value: value, Timestamp: int64(timestampActual), Tombstone: tombstoneActual}
 	crcCurrent := CRC32(rec.RecToBytes(recordActual))
@@ -348,13 +446,15 @@ func (sstable *SSTableInstance) ReadRecord() rec.Record {
 // AKO JE MULTI FILE SSTABELA, DODAJE SE U SVE!!!
 func (sstable *SSTableCreator) WriteRecord(record rec.Record) {
 	config.Init()
+	dict := compress.NewCompressionDict()
+	dict.ReadFromFile()
 
 	if sstable.Instance.isCompressed {
-		// TO-DO: dodaj kljuc u mapu za kompresiju ako je to potrebno
+		dict.Write(record.Key)
+		dict.WriteToFile()
 	}
 
 	if sstable.Instance.isSingleFile {
-		// TO-DO: dodaj na data i upisi u bloomfilter
 		file, err := os.OpenFile(sstable.Instance.filename, os.O_RDWR, 0777)
 		if err != nil {
 			log.Fatal(err)
@@ -363,6 +463,7 @@ func (sstable *SSTableCreator) WriteRecord(record rec.Record) {
 		// TO-DO: Bloomfilter
 		{
 			file.Seek(sstable.Instance.bloomfilterBeginOffset, 0)
+			// read bloomfilter bytes
 			// deserialize bloomfilter
 			// add element to bloomfilter
 			// serialize bloomfilter
@@ -410,13 +511,9 @@ func (sstable *SSTableCreator) WriteRecord(record rec.Record) {
 					log.Fatal(err)
 				}
 
-				var finalKey string
-				if sstable.Instance.isCompressed {
-					// TO-DO: dobavi kljuc u finalKey iz mape
-				} else {
-					finalKey = record.Key
-				}
-				keyLength := uint64(len(finalKey))
+				finalKeyBytes := []byte(record.Key)
+				keyLength := uint64(len(record.Key))
+
 				keyLengthBytes := make([]byte, 8)
 				binary.LittleEndian.PutUint64(keyLengthBytes, keyLength)
 
@@ -425,7 +522,7 @@ func (sstable *SSTableCreator) WriteRecord(record rec.Record) {
 
 				summaryBytes := make([]byte, 0)
 				summaryBytes = append(summaryBytes, keyLengthBytes...)
-				summaryBytes = append(summaryBytes, []byte(finalKey)...)
+				summaryBytes = append(summaryBytes, finalKeyBytes...)
 				summaryBytes = append(summaryBytes, offsetBytes...)
 
 				summaryFile.Write(summaryBytes)
@@ -444,12 +541,8 @@ func (sstable *SSTableCreator) WriteRecord(record rec.Record) {
 					log.Fatal(err)
 				}
 
-				var finalKey string
-				if sstable.Instance.isCompressed {
-					// TO-DO: dobavi kljuc u finalKey iz mape
-				} else {
-					finalKey = record.Key
-				}
+				finalKey := record.Key
+
 				keyLength := uint64(len(finalKey))
 				keyLengthBytes := make([]byte, 8)
 				binary.LittleEndian.PutUint64(keyLengthBytes, keyLength)
