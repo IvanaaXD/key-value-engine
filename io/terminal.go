@@ -74,7 +74,7 @@ func GetKey() string {
 	return key
 }
 
-func RangeScanInput() (string, string) {
+func RangeScanInput() (string, string, int, int) {
 
 	scanner := bufio.NewScanner(os.Stdin)
 	var start, end string
@@ -111,10 +111,12 @@ func RangeScanInput() (string, string) {
 		break
 	}
 
-	return start, end
+	pageNum, pageSize := GetPageNumAndSize()
+
+	return start, end, pageNum, pageSize
 }
 
-func PrefixScanInput() string {
+func PrefixScanInput() (string, int, int) {
 
 	scanner := bufio.NewScanner(os.Stdin)
 	var prefix string
@@ -135,7 +137,54 @@ func PrefixScanInput() string {
 		break
 	}
 
-	return prefix
+	pageNum, pageSize := GetPageNumAndSize()
+
+	return prefix, pageNum, pageSize
+}
+
+func GetPageNumAndSize() (int, int) {
+
+	var pnStr, psStr string
+	var pageNum, pageSize int
+	scanner := bufio.NewScanner(os.Stdin)
+
+	for {
+		fmt.Print("Page number: ")
+		scanner.Scan()
+		pnStr = scanner.Text()
+
+		if len(pnStr) <= 0 {
+			fmt.Println("empty page number")
+			continue
+		}
+
+		pageNum, _ = strconv.Atoi(pnStr)
+		if pageNum < 1 {
+			fmt.Println("Invalid number of pages.. Try again.")
+			continue
+		}
+		break
+	}
+
+	for {
+		fmt.Print("Page size: ")
+		scanner.Scan()
+		psStr = scanner.Text()
+
+		if len(psStr) <= 0 {
+			fmt.Println("empty page size")
+			continue
+		}
+
+		pageSize, _ = strconv.Atoi(psStr)
+		if pageSize < 1 {
+			fmt.Println("Invalid number of page size.. Try again.")
+			continue
+		}
+		break
+	}
+
+	return pageNum, pageSize
 }
 
 func GetBF() (string, int, float64) {
@@ -465,18 +514,16 @@ func Menu() error {
 			if !IsTBAvailable() {
 				fmt.Println("Too many requests. Please wait.")
 			} else {
-				prefix := PrefixScanInput()
-				records := PrefixScan(prefix)
-				GetPage(records)
+				prefix, pageNum, pageSize := PrefixScanInput()
+				GetPrefixPage(prefix, pageNum, pageSize)
 			}
 
 		case "4": // RANGE SCAN
 			if !IsTBAvailable() {
 				fmt.Println("Too many requests. Please wait.")
 			} else {
-				start, end := RangeScanInput()
-				records := RangeScan(start, end)
-				GetPage(records)
+				start, end, pageNum, pageSize := RangeScanInput()
+				GetRangePage(start, end, pageNum, pageSize)
 			}
 
 		case "6": // MAKE NEW BF

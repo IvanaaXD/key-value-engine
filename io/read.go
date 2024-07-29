@@ -64,72 +64,46 @@ func Get(key string) (record.Record, bool) {
 	return record.Record{}, false
 }
 
-func PrefixScan(key string) []record.Record {
-	memtableRecords := inicialize.Memtables.PrefixScan(key)
-	// sstableRecords := sstable.PrefixScanAll(key)
+func PrefixScan(key string, pageNumber, pageSize int, oldRecords []*record.Record) []record.Record {
+	memtableRecords := inicialize.Memtables.PrefixScan(key, pageNumber, pageSize, oldRecords)
 
-	var result []record.Record
-
-	for _, memRec := range memtableRecords {
-		result = append(result, *memRec)
+	var sstableRecords []*record.Record
+	if len(memtableRecords) < pageNumber*pageSize {
+		// sstableRecords = sstable.PrefixScanAll(start, end, pageNumber, pageSize, memtableRecords, oldRecords)
 	}
 
-	//for _, sstRec := range sstableRecords {
-	//	found := false
-	//	for i := 0; i < len(result); i++ {
-	//		if result[i].Key == sstRec.Key {
-	//			found = true
-	//		}
-	//	}
-	//	if found {
-	//		result = append(result, *sstRec)
-	//	}
-	//}
+	allRecords := append(memtableRecords, sstableRecords...)
 
-	for _, rec := range result {
-		if !rec.Tombstone {
-			result = append(result, rec)
-		}
-	}
-
-	sort.Slice(result, func(i, j int) bool {
-		return result[i].Key < result[j].Key
+	sort.Slice(allRecords, func(i, j int) bool {
+		return allRecords[i].Key < allRecords[j].Key
 	})
+
+	result := make([]record.Record, len(allRecords))
+	for i, rec := range allRecords {
+		result[i] = *rec
+	}
 
 	return result
 }
 
-func RangeScan(start, end string) []record.Record {
-	memtableRecords := inicialize.Memtables.RangeScan(start, end)
-	// sstableRecords := sstable.RangeScanAll(start, end)
+func RangeScan(start, end string, pageNumber, pageSize int, oldRecords []*record.Record) []record.Record {
+	memtableRecords := inicialize.Memtables.RangeScan(start, end, pageNumber, pageSize, oldRecords)
 
-	var result []record.Record
-
-	for _, memRec := range memtableRecords {
-		result = append(result, *memRec)
+	var sstableRecords []*record.Record
+	if len(memtableRecords) < pageNumber*pageSize {
+		// sstableRecords = sstable.RangeScanAll(start, end, pageNumber, pageSize, memtableRecords, oldRecords)
 	}
 
-	//for _, sstRec := range sstableRecords {
-	//	found := false
-	//	for i := 0; i < len(result); i++ {
-	//		if result[i].Key == sstRec.Key {
-	//			found = true
-	//		}
-	//	}
-	//	if found {
-	//		result = append(result, *sstRec)
-	//	}
-	//}
+	allRecords := append(memtableRecords, sstableRecords...)
 
-	for _, rec := range result {
-		if !rec.Tombstone {
-			result = append(result, rec)
-		}
-	}
-
-	sort.Slice(result, func(i, j int) bool {
-		return result[i].Key < result[j].Key
+	sort.Slice(allRecords, func(i, j int) bool {
+		return allRecords[i].Key < allRecords[j].Key
 	})
+
+	result := make([]record.Record, len(allRecords))
+	for i, rec := range allRecords {
+		result[i] = *rec
+	}
 
 	return result
 }
