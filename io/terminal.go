@@ -425,33 +425,35 @@ func Menu() error {
 		fmt.Println("3. Delete")
 		fmt.Println("4. Range scan")
 		fmt.Println("5. Prefix scan")
+		fmt.Println("6. Range iterator")
+		fmt.Println("7. Prefix iterator")
 		fmt.Println()
 		fmt.Println("============BLOOM FILTER============")
 		fmt.Println()
-		fmt.Println("6. Make new BF")
-		fmt.Println("7. Add to BF")
-		fmt.Println("8. Find in BF")
-		fmt.Println("9. Delete BF")
+		fmt.Println("8. Make new BF")
+		fmt.Println("9. Add to BF")
+		fmt.Println("10. Find in BF")
+		fmt.Println("11. Delete BF")
 		fmt.Println()
 		fmt.Println("==============SIM HASH==============")
 		fmt.Println()
-		fmt.Println("10. Make new SH \n (adding to sh at same time)")
-		fmt.Println("11. Find distance")
-		fmt.Println("12. Delete SH")
+		fmt.Println("12. Make new SH \n (adding to sh at same time)")
+		fmt.Println("13. Find distance")
+		fmt.Println("14. Delete SH")
 		fmt.Println()
 		fmt.Println("==========COUNT MIN SKETCH==========")
 		fmt.Println()
-		fmt.Println("13. Make new CMS")
-		fmt.Println("14. Add to CMS")
-		fmt.Println("15. Find frequency")
-		fmt.Println("16. Delete CMS")
+		fmt.Println("15. Make new CMS")
+		fmt.Println("16. Add to CMS")
+		fmt.Println("17. Find frequency")
+		fmt.Println("18. Delete CMS")
 		fmt.Println()
 		fmt.Println("============HYPER LOGLOG============")
 		fmt.Println()
-		fmt.Println("17. Make new HLL")
-		fmt.Println("18. Add to HLL")
-		fmt.Println("19. Find cardinality")
-		fmt.Println("20. Delete HLL")
+		fmt.Println("19. Make new HLL")
+		fmt.Println("20. Add to HLL")
+		fmt.Println("21. Find cardinality")
+		fmt.Println("22. Delete HLL")
 		fmt.Println()
 		fmt.Println("===================================")
 		fmt.Println()
@@ -526,7 +528,23 @@ func Menu() error {
 				GetRangePage(start, end, pageNum, pageSize)
 			}
 
-		case "6": // MAKE NEW BF
+		case "6": // PREFIX ITERATOR
+			if !IsTBAvailable() {
+				fmt.Println("Too many requests. Please wait.")
+			} else {
+				prefix, pageNum, pageSize := PrefixScanInput()
+				GetPrefixPage(prefix, pageNum, pageSize)
+			}
+
+		case "7": // RANGE ITERATOR
+			if !IsTBAvailable() {
+				fmt.Println("Too many requests. Please wait.")
+			} else {
+				start, end, pageNum, pageSize := RangeScanInput()
+				GetRangePage(start, end, pageNum, pageSize)
+			}
+
+		case "8": // MAKE NEW BF
 			if !IsTBAvailable() {
 				fmt.Println("Too many requests. Please wait.")
 			} else {
@@ -538,7 +556,7 @@ func Menu() error {
 				}
 			}
 
-		case "7": // ADD T0 BF
+		case "9": // ADD T0 BF
 			if !IsTBAvailable() {
 				fmt.Println("Too many requests. Please wait.")
 			} else {
@@ -550,7 +568,7 @@ func Menu() error {
 				}
 			}
 
-		case "8": // FIND IN BF
+		case "10": // FIND IN BF
 			if !IsTBAvailable() {
 				fmt.Println("Too many requests. Please wait.")
 			} else {
@@ -563,7 +581,7 @@ func Menu() error {
 				fmt.Println("Record may exist")
 			}
 
-		case "9": // DELETE BF
+		case "11": // DELETE BF
 			if !IsTBAvailable() {
 				fmt.Println("Too many requests. Please wait.")
 			} else {
@@ -575,7 +593,7 @@ func Menu() error {
 				}
 			}
 
-		case "10": // MAKE NEW SH
+		case "12": // MAKE NEW SH
 			if !IsTBAvailable() {
 				fmt.Println("Too many requests. Please wait.")
 			} else {
@@ -587,7 +605,7 @@ func Menu() error {
 				}
 			}
 
-		case "11": // DISTANCE IN SH
+		case "13": // DISTANCE IN SH
 			if !IsTBAvailable() {
 				fmt.Println("Too many requests. Please wait.")
 			} else {
@@ -600,7 +618,7 @@ func Menu() error {
 				fmt.Printf("Distance is %d", ok)
 			}
 
-		case "12": // DELETE SH
+		case "14": // DELETE SH
 			if !IsTBAvailable() {
 				fmt.Println("Too many requests. Please wait.")
 			} else {
@@ -612,7 +630,7 @@ func Menu() error {
 				}
 			}
 
-		case "13": // MAKE NEW CMS
+		case "15": // MAKE NEW CMS
 			if !IsTBAvailable() {
 				fmt.Println("Too many requests. Please wait.")
 			} else {
@@ -624,7 +642,7 @@ func Menu() error {
 				}
 			}
 
-		case "14": // ADD T0 CMS
+		case "16": // ADD T0 CMS
 			if !IsTBAvailable() {
 				fmt.Println("Too many requests. Please wait.")
 			} else {
@@ -636,7 +654,7 @@ func Menu() error {
 				}
 			}
 
-		case "15": // FREQUENCY IN CMS
+		case "17": // FREQUENCY IN CMS
 			if !IsTBAvailable() {
 				fmt.Println("Too many requests. Please wait.")
 			} else {
@@ -649,7 +667,7 @@ func Menu() error {
 				fmt.Printf("Frequency is %d", ok)
 			}
 
-		case "16": // DELETE CMS
+		case "18": // DELETE CMS
 			if !IsTBAvailable() {
 				fmt.Println("Too many requests. Please wait.")
 			} else {
@@ -661,7 +679,7 @@ func Menu() error {
 				}
 			}
 
-		case "17": // MAKE NEW HLL
+		case "19": // MAKE NEW HLL
 			if !IsTBAvailable() {
 				fmt.Println("Too many requests. Please wait.")
 			} else {
@@ -672,7 +690,7 @@ func Menu() error {
 				}
 			}
 
-		case "18": // ADD T0 HLL
+		case "20": // ADD T0 HLL
 			if !IsTBAvailable() {
 				fmt.Println("Too many requests. Please wait.")
 			} else {
@@ -684,7 +702,7 @@ func Menu() error {
 				}
 			}
 
-		case "19": // COUNT IN HLL
+		case "21": // COUNT IN HLL
 			if !IsTBAvailable() {
 				fmt.Println("Too many requests. Please wait.")
 			} else {
@@ -697,7 +715,7 @@ func Menu() error {
 				fmt.Printf("Discount is %d", ok)
 			}
 
-		case "20": // DELETE HLL
+		case "22": // DELETE HLL
 			if !IsTBAvailable() {
 				fmt.Println("Too many requests. Please wait.")
 			} else {

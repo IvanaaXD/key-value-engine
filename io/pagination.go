@@ -31,7 +31,7 @@ func GetRangePage(start, end string, pageNum, pageSize int) {
 			pageNum += movePages
 
 			if movePages == 1 {
-				var newRecords = RangeScan(start, end, pageNum, pageSize, GetListOfPointers(records))
+				var newRecords = RangeScan(start, end, movePages, pageSize, GetListOfPointers(records))
 				records = append(records, newRecords...)
 			}
 
@@ -76,7 +76,7 @@ func GetPrefixPage(prefix string, pageNum, pageSize int) {
 			pageNum += movePages
 
 			if movePages == 1 {
-				var newRecords = PrefixScan(prefix, pageNum, pageSize, GetListOfPointers(records))
+				var newRecords = PrefixScan(prefix, movePages, pageSize, GetListOfPointers(records))
 				records = append(records, newRecords...)
 			}
 
