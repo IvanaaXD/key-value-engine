@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"github.com/IvanaaXD/NASP/app/config"
 	"github.com/IvanaaXD/NASP/structures/record"
-	"github.com/IvanaaXD/NASP/structures/wal"
-	"io"
+	"github.com/IvanaaXD/NASP/structures/writeAheadLog"
 	"os"
 	"sort"
 	"time"
 )
+
+const NullElementKey string = "NULLELEMENT"
 
 type Memtables struct {
 	Current   int
@@ -65,53 +66,36 @@ func CheckWal() bool {
 
 func (mi *Memtables) Recover() error {
 
-	n := config.GlobalConfig.MemtableSize
+	var i = 0
+	currentMemtable := mi.Tables[i]
 
-	walFile, err := os.Open(config.GlobalConfig.WalPath)
-	if err != nil {
-		panic(fmt.Sprintf("Log file error: %s", err))
-	}
+	wal := writeaheadlog.InitializeWAL()
 
-	for i := 0; i < int(n); i++ {
-		currentMemtable := mi.Tables[i]
+	for {
+		rec := wal.ReadRecord(i)
 
-		for {
-			rec, err1 := wal.ReadWalRecord(walFile)
-			if err1 == io.EOF {
-				return nil
-			} else if err1 != nil {
-				return err1
-			}
-
-			var success bool
-			if rec.Tombstone {
-				success = currentMemtable.Structure.Delete(rec)
-			} else {
-				success = currentMemtable.Structure.Write(rec)
-			}
-
-			if currentMemtable.maxSize == currentMemtable.Structure.GetSize() {
-				mi.Current = (mi.Current + 1) % mi.MaxTables
-
-			}
-			if !success {
-				return errors.New("recovery fail")
-			}
+		recc := record.Record{Key: NullElementKey, Tombstone: true}
+		if rec.Key == recc.Key {
+			break
 		}
 
-		if mi.Tables[mi.Current].maxSize == mi.Tables[mi.Current].Structure.GetSize() {
-			if mi.Current == mi.Last {
-				err = mi.Flush()
-				if err != nil {
-					fmt.Println("Error flushing: ", err)
-					return err
-				}
-			}
+		if currentMemtable.maxSize == currentMemtable.Structure.GetSize() {
+			i++
+			currentMemtable = mi.Tables[i]
 		}
-		if err != nil {
-			return err
+
+		var success bool
+		if rec.Tombstone {
+			success = currentMemtable.Structure.Delete(rec)
+		} else {
+			success = currentMemtable.Structure.Write(rec)
+		}
+
+		if !success {
+			return errors.New("recovery fail")
 		}
 	}
+
 	return nil
 }
 
@@ -225,20 +209,25 @@ func (mi *Memtables) Delete(key string) error {
 
 // searching for key with given prefix
 
-func (mi *Memtables) PrefixScan(prefix string) []*record.Record {
+func (mi *Memtables) PrefixScan(prefix string, pageNumber, pageSize int, oldRecords []*record.Record) []*record.Record {
 
-	records := make([]*record.Record, 0)
+	var records []*record.Record
 	latestTimestamps := make(map[string]int64)
 
+	var count int
+outerLoop:
 	for i := 0; i < mi.MaxTables; i++ {
-
-		if mi.Tables[i].Structure.GetSize() == 0 {
-			continue
-		}
-
 		list := mi.Tables[i].PrefixScan(prefix)
+		list = CheckRecords(list, oldRecords)
 
 		for _, rec := range list {
+			if count >= pageSize*pageNumber {
+				break outerLoop
+			}
+
+			if rec.Tombstone {
+				continue
+			}
 
 			if storedTimestamp, exists := latestTimestamps[rec.Key]; exists {
 				if rec.Timestamp > storedTimestamp {
@@ -248,6 +237,7 @@ func (mi *Memtables) PrefixScan(prefix string) []*record.Record {
 			} else {
 				latestTimestamps[rec.Key] = rec.Timestamp
 				records = append(records, rec)
+				count++
 			}
 		}
 	}
@@ -270,17 +260,58 @@ func replaceRecord(records []*record.Record, newRecord *record.Record) {
 	}
 }
 
+// check if records are in the founded list already
+
+func CheckRecords(newRecords, oldRecords []*record.Record) []*record.Record {
+
+	oldRecordsMap := make(map[string]*record.Record)
+	for _, rec := range oldRecords {
+		oldRecordsMap[rec.Key] = rec
+	}
+
+	for _, newRec := range newRecords {
+		oldRec, exists := oldRecordsMap[newRec.Key]
+		if exists {
+			if newRec.Timestamp > oldRec.Timestamp {
+				if newRec.Tombstone {
+					delete(oldRecordsMap, oldRec.Key)
+				}
+				oldRecordsMap[newRec.Key] = newRec
+			}
+		} else {
+			oldRecordsMap[newRec.Key] = newRec
+		}
+	}
+
+	updatedRecords := make([]*record.Record, 0, len(oldRecordsMap))
+	for _, rec := range oldRecordsMap {
+		updatedRecords = append(updatedRecords, rec)
+	}
+
+	return updatedRecords
+}
+
 // searching for key in given rate
 
-func (mi *Memtables) RangeScan(start, finish string) []*record.Record {
+func (mi *Memtables) RangeScan(start, finish string, pageNumber, pageSize int, oldRecords []*record.Record) []*record.Record {
 
 	var records []*record.Record
 	latestTimestamps := make(map[string]int64)
 
+	var count int
+outerLoop:
 	for i := 0; i < mi.MaxTables; i++ {
 		list := mi.Tables[i].RangeScan(start, finish)
+		list = CheckRecords(list, oldRecords)
 
 		for _, rec := range list {
+			if count >= pageSize*pageNumber {
+				break outerLoop
+			}
+
+			if rec.Tombstone {
+				continue
+			}
 
 			if storedTimestamp, exists := latestTimestamps[rec.Key]; exists {
 				if rec.Timestamp > storedTimestamp {
@@ -290,6 +321,7 @@ func (mi *Memtables) RangeScan(start, finish string) []*record.Record {
 			} else {
 				latestTimestamps[rec.Key] = rec.Timestamp
 				records = append(records, rec)
+				count++
 			}
 		}
 	}

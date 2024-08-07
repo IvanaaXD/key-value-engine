@@ -9,8 +9,6 @@ import (
 	"github.com/IvanaaXD/NASP/structures/iterator"
 	"github.com/IvanaaXD/NASP/structures/record"
 	skip_list "github.com/IvanaaXD/NASP/structures/skip-list"
-	"github.com/IvanaaXD/NASP/structures/wal"
-	"io"
 	"os"
 	"sort"
 	"strings"
@@ -42,39 +40,6 @@ func NewMemtable(config *config.Config, strucName string) *Memtable {
 	mTable := Memtable{maxSize, structure}
 
 	return &mTable
-}
-
-// recovering in case of error
-
-func (m *Memtable) recover() error {
-
-	walFile, err := os.Open(config.GlobalConfig.WalPath)
-
-	if err != nil {
-		panic(fmt.Sprintf("Log file error: %s", err))
-	}
-
-	for {
-		rec, err1 := wal.ReadWalRecord(walFile)
-		if err1 == io.EOF {
-			break
-		} else if err1 != nil {
-			return err1
-		}
-
-		var success bool
-		if rec.Tombstone {
-			success = m.Structure.Delete(rec)
-		} else {
-			success = m.Structure.Write(rec)
-		}
-
-		if !success {
-			return errors.New("recovery fail")
-		}
-	}
-
-	return nil
 }
 
 // clear memtable

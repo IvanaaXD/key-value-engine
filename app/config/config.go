@@ -48,7 +48,6 @@ const (
 	PREFIX                     = "data/usertables"
 	LSM_MAX_LEVELS             = 4
 	LSM_MAX_TABLES             = 4
-	OFFSET_PATH                = "resources/wal.txt"
 
 	TIMESTAMP_SIZE  = 8
 	TOMBSTONE_SIZE  = 1
@@ -106,7 +105,6 @@ type Config struct {
 	LSMMaxLevels        int      `yaml:"lsmMaxLevels"`
 	LSMMaxTables        uint64   `yaml:"lsmMaxTables"`
 	LsmLeveledComp      []uint64 `yaml:"lsmLeveledComp"`
-	OffsetPath          string   `yaml:"offsetPath"`
 }
 
 func NewConfig(filename string) *Config {
@@ -153,7 +151,6 @@ func NewConfig(filename string) *Config {
 		config.LSMMaxTables = LSM_MAX_TABLES
 		config.LSMMaxLevels = LSM_MAX_LEVELS
 		config.LsmLeveledComp = []uint64{4, 10, 100, 500}
-		config.OffsetPath = OFFSET_PATH
 
 	} else {
 		err = yaml.Unmarshal(yamlFile, &config)
@@ -188,7 +185,6 @@ func NewConfig(filename string) *Config {
 		config.SHPrefix = SH_PREFIX
 		config.TBPrefix = TB_PREFIX
 		config.MapFileName = MAP_FILE_PATH
-		config.OffsetPath = OFFSET_PATH
 	}
 
 	return &config

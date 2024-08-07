@@ -1,4 +1,4 @@
-package init
+package inicialize
 
 import (
 	"errors"
@@ -48,7 +48,4 @@ func Init() {
 	if err2 != nil {
 		fmt.Println("Failed.")
 	}
-
-	//wal.CreateFile()
-
 }
