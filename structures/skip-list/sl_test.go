@@ -2,6 +2,10 @@ package skip_list
 
 import (
 	"fmt"
+<<<<<<< HEAD
+=======
+	"github.com/IvanaaXD/NASP/structures/record"
+>>>>>>> dev
 	"testing"
 
 	"github.com/IvanaaXD/NASP/structures/record"

@@ -3,10 +3,11 @@ package config
 import (
 	"errors"
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"os"
 	"path/filepath"
 	"runtime"
+
+	"gopkg.in/yaml.v3"
 )
 
 var GlobalConfig Config
@@ -20,6 +21,7 @@ const (
 	CMS_PREFIX = "___cms___"
 	HLL_PREFIX = "___hll___"
 	SH_PREFIX  = "___sh___"
+	TB_PREFIX  = "___tb___"
 
 	BF_EXPECTED_EL             = 1000  // broj ocekivanih elemenata u bloom filteru
 	BF_FALSE_POSITIVE_RATE     = 0.001 // bloom filter false positive
@@ -35,7 +37,7 @@ const (
 	TOKEN_REFRESH_TIME         = 2
 	MAX_ENTRY_SIZE             = 1024
 	COMPRESSION_DICT_FILE_PATH = "resources/compression_dict.dat"
-	WAL_PATH                   = "resources/wal.log"
+	WAL_PATH                   = "resources/wal_0001.log"
 	SCALING_FACTOR             = 2
 	COMPACTION_ALGORITHM       = "sizeTiered"
 	SEGMENT_SIZE               = 256
@@ -46,7 +48,6 @@ const (
 	PREFIX                     = "data/usertables"
 	LSM_MAX_LEVELS             = 4
 	LSM_MAX_TABLES             = 4
-	OFFSET_PATH                = "resources/wal.txt"
 
 	TIMESTAMP_SIZE  = 8
 	TOMBSTONE_SIZE  = 1
@@ -69,8 +70,8 @@ type Config struct {
 	MemtableSize        uint     `yaml:"memtableSize"`
 	MemtableNum         uint     `yaml:"memtableNum"`
 	StructureType       string   `yaml:"structureType"`
-	TokenNumber         int      `yaml:"tokenNumber"`
-	TokenRefreshTime    float64  `yaml:"tokenRefreshTime"`
+	TokenNumber         uint16   `yaml:"tokenNumber"`
+	TokenRefreshTime    uint16   `yaml:"tokenRefreshTime"`
 	WalPath             string   `yaml:"walPath"`
 	MaxEntrySize        int      `yaml:"maxEntrySize"`
 	CrcSize             int      `yaml:"crcSize"`
@@ -98,12 +99,12 @@ type Config struct {
 	CMSPrefix           string   `yaml:"cmsPrefix"`
 	HLLPrefix           string   `yaml:"hllPrefix"`
 	SHPrefix            string   `yaml:"shPrefix"`
+	TBPrefix            string   `yaml:"tbPrefix"`
 	Compression         string   `yaml:"compression"`
 	MapFileName         string   `yaml:"mapFileName"`
 	LSMMaxLevels        int      `yaml:"lsmMaxLevels"`
 	LSMMaxTables        uint64   `yaml:"lsmMaxTables"`
 	LsmLeveledComp      []uint64 `yaml:"lsmLeveledComp"`
-	OffsetPath          string   `yaml:"offsetPath"`
 }
 
 func NewConfig(filename string) *Config {
@@ -144,12 +145,12 @@ func NewConfig(filename string) *Config {
 		config.CMSPrefix = CMS_PREFIX
 		config.HLLPrefix = HLL_PREFIX
 		config.SHPrefix = SH_PREFIX
+		config.TBPrefix = TB_PREFIX
 		config.Compression = COMPRESSION
 		config.MapFileName = MAP_FILE_PATH
 		config.LSMMaxTables = LSM_MAX_TABLES
 		config.LSMMaxLevels = LSM_MAX_LEVELS
 		config.LsmLeveledComp = []uint64{4, 10, 100, 500}
-		config.OffsetPath = OFFSET_PATH
 
 	} else {
 		err = yaml.Unmarshal(yamlFile, &config)
@@ -182,8 +183,8 @@ func NewConfig(filename string) *Config {
 		config.CMSPrefix = CMS_PREFIX
 		config.HLLPrefix = HLL_PREFIX
 		config.SHPrefix = SH_PREFIX
+		config.TBPrefix = TB_PREFIX
 		config.MapFileName = MAP_FILE_PATH
-		config.OffsetPath = OFFSET_PATH
 	}
 
 	return &config

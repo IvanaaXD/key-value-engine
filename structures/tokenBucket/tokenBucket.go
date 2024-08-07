@@ -39,10 +39,10 @@ func (tb *TokenBucket) Serialize() []byte {
 	riBytes := make([]byte, 2)
 	ntBytes := make([]byte, 2)
 	mtBytes := make([]byte, 2)
-	binary.BigEndian.PutUint64(lrBytes, uint64(tb.lastRefreshed))
-	binary.BigEndian.PutUint16(riBytes, tb.refreshingInterval)
-	binary.BigEndian.PutUint16(ntBytes, tb.numTokens)
-	binary.BigEndian.PutUint16(mtBytes, tb.maxTokens)
+	binary.LittleEndian.PutUint64(lrBytes, uint64(tb.lastRefreshed))
+	binary.LittleEndian.PutUint16(riBytes, tb.refreshingInterval)
+	binary.LittleEndian.PutUint16(ntBytes, tb.numTokens)
+	binary.LittleEndian.PutUint16(mtBytes, tb.maxTokens)
 	serialized = append(serialized, lrBytes...)
 	serialized = append(serialized, riBytes...)
 	serialized = append(serialized, ntBytes...)
@@ -58,9 +58,9 @@ func Deserialize(bytes []byte) *TokenBucket {
 	riBytes := bytes[8:10]
 	ntBytes := bytes[10:12]
 	mtBytes := bytes[12:]
-	lr := int64(binary.BigEndian.Uint64(lrBytes))
-	ri := binary.BigEndian.Uint16(riBytes)
-	nt := binary.BigEndian.Uint16(ntBytes)
-	mt := binary.BigEndian.Uint16(mtBytes)
+	lr := int64(binary.LittleEndian.Uint64(lrBytes))
+	ri := binary.LittleEndian.Uint16(riBytes)
+	nt := binary.LittleEndian.Uint16(ntBytes)
+	mt := binary.LittleEndian.Uint16(mtBytes)
 	return &TokenBucket{lastRefreshed: lr, refreshingInterval: ri, numTokens: nt, maxTokens: mt}
 }

@@ -1,17 +1,21 @@
-package NASP
+package inicialize
 
 import (
 	"errors"
+	"fmt"
 	"github.com/IvanaaXD/NASP/app/config"
 	"github.com/IvanaaXD/NASP/structures/cache"
 	"github.com/IvanaaXD/NASP/structures/memtable"
+	"github.com/IvanaaXD/NASP/structures/record"
+	"github.com/IvanaaXD/NASP/structures/tokenBucket"
 	"os"
+	"time"
 )
 
 var Memtables *memtable.Memtables
 var Cache *cache.Cache
 
-//var TokenBucket *tokenBucket.TokenBucket
+var TokenBucket *tokenbucketv2.TokenBucket
 
 func Init() {
 
@@ -34,8 +38,14 @@ func Init() {
 
 	Memtables = memtable.NewMemtables(&config.GlobalConfig)
 	Cache = cache.NewCache(config.GlobalConfig.CacheCapacity)
-	//TokenBucket = tokenBucket.NewTokenBucket(config.GlobalConfig.TokenNumber, config.GlobalConfig.TokenRefreshTime)
+	TokenBucket = tokenbucketv2.MakeTokenBucket(config.GlobalConfig.TokenNumber, config.GlobalConfig.TokenRefreshTime)
 
-	//wal.CreateFile()
+	key := config.GlobalConfig.TBPrefix + "key"
+	value := TokenBucket.Serialize()
 
+	Record := record.Record{key, value, time.Now().UnixNano(), false}
+	err2 := Memtables.Write(Record)
+	if err2 != nil {
+		fmt.Println("Failed.")
+	}
 }
