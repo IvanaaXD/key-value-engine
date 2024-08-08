@@ -363,7 +363,8 @@ func (sstable *SSTableInstance) readValue(file *os.File) []byte {
 
 // Funkcija cita sledeci record upisan u SSTabelu, deserijalizuje ga i vraca ga kao povratnu vrednost.
 // Pamti se dokle se stiglo sa citanjem u SSTabeli.
-func (sstable *SSTableInstance) ReadRecord() rec.Record {
+// Ako nema sta da se procita, vraca se prazan record i false
+func (sstable *SSTableInstance) ReadRecord() (rec.Record, bool) {
 	var file *os.File
 	var err error
 	var crcActual uint64
@@ -388,6 +389,11 @@ func (sstable *SSTableInstance) ReadRecord() rec.Record {
 			log.Fatal(err)
 		}
 		file.Seek(sstable.currentOffset, 0)
+	}
+
+	fileInfo, _ := file.Stat()
+	if sstable.currentOffset == fileInfo.Size() {
+		return rec.Record{}, false
 	}
 
 	crcBytes := sstable.readValue(file)
@@ -438,7 +444,7 @@ func (sstable *SSTableInstance) ReadRecord() rec.Record {
 	if crcCurrent != uint32(crcActual) {
 		fmt.Println("Oprez! Moguce je da dobijena vrednost nije validna!")
 	}
-	return recordActual
+	return recordActual, true
 }
 
 // Funkcija upisuje prosledjen record na sledece mesto u SSTabeli. Koristice se za LSM
