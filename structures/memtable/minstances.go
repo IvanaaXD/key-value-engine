@@ -209,7 +209,7 @@ func (mi *Memtables) Delete(key string) error {
 
 // searching for key with given prefix
 
-func (mi *Memtables) PrefixScan(prefix string, pageNumber, pageSize int, oldRecords []*record.Record) []*record.Record {
+func (mi *Memtables) PrefixScan(prefix string, pageNumber, pageSize int) []*record.Record {
 
 	var records []*record.Record
 	latestTimestamps := make(map[string]int64)
@@ -218,12 +218,48 @@ func (mi *Memtables) PrefixScan(prefix string, pageNumber, pageSize int, oldReco
 outerLoop:
 	for i := 0; i < mi.MaxTables; i++ {
 		list := mi.Tables[i].PrefixScan(prefix)
-		list = CheckRecords(list, oldRecords)
 
 		for _, rec := range list {
 			if count >= pageSize*pageNumber {
 				break outerLoop
 			}
+
+			if rec.Tombstone {
+				continue
+			}
+
+			if storedTimestamp, exists := latestTimestamps[rec.Key]; exists {
+				if rec.Timestamp > storedTimestamp {
+					latestTimestamps[rec.Key] = rec.Timestamp
+					replaceRecord(records, rec)
+				}
+			} else {
+				latestTimestamps[rec.Key] = rec.Timestamp
+				records = append(records, rec)
+				count++
+			}
+		}
+	}
+
+	sort.Slice(records, func(i, j int) bool {
+		return records[i].Key < records[j].Key
+	})
+
+	return records
+}
+
+// searching for key with given prefix
+
+func (mi *Memtables) PrefixIterate(prefix string) []*record.Record {
+
+	var records []*record.Record
+	latestTimestamps := make(map[string]int64)
+
+	var count int
+	for i := 0; i < mi.MaxTables; i++ {
+		list := mi.Tables[i].PrefixScan(prefix)
+
+		for _, rec := range list {
 
 			if rec.Tombstone {
 				continue
@@ -260,40 +296,9 @@ func replaceRecord(records []*record.Record, newRecord *record.Record) {
 	}
 }
 
-// check if records are in the founded list already
-
-func CheckRecords(newRecords, oldRecords []*record.Record) []*record.Record {
-
-	oldRecordsMap := make(map[string]*record.Record)
-	for _, rec := range oldRecords {
-		oldRecordsMap[rec.Key] = rec
-	}
-
-	for _, newRec := range newRecords {
-		oldRec, exists := oldRecordsMap[newRec.Key]
-		if exists {
-			if newRec.Timestamp > oldRec.Timestamp {
-				if newRec.Tombstone {
-					delete(oldRecordsMap, oldRec.Key)
-				}
-				oldRecordsMap[newRec.Key] = newRec
-			}
-		} else {
-			oldRecordsMap[newRec.Key] = newRec
-		}
-	}
-
-	updatedRecords := make([]*record.Record, 0, len(oldRecordsMap))
-	for _, rec := range oldRecordsMap {
-		updatedRecords = append(updatedRecords, rec)
-	}
-
-	return updatedRecords
-}
-
 // searching for key in given rate
 
-func (mi *Memtables) RangeScan(start, finish string, pageNumber, pageSize int, oldRecords []*record.Record) []*record.Record {
+func (mi *Memtables) RangeScan(start, finish string, pageNumber, pageSize int) []*record.Record {
 
 	var records []*record.Record
 	latestTimestamps := make(map[string]int64)
@@ -302,12 +307,48 @@ func (mi *Memtables) RangeScan(start, finish string, pageNumber, pageSize int, o
 outerLoop:
 	for i := 0; i < mi.MaxTables; i++ {
 		list := mi.Tables[i].RangeScan(start, finish)
-		list = CheckRecords(list, oldRecords)
 
 		for _, rec := range list {
 			if count >= pageSize*pageNumber {
 				break outerLoop
 			}
+
+			if rec.Tombstone {
+				continue
+			}
+
+			if storedTimestamp, exists := latestTimestamps[rec.Key]; exists {
+				if rec.Timestamp > storedTimestamp {
+					latestTimestamps[rec.Key] = rec.Timestamp
+					replaceRecord(records, rec)
+				}
+			} else {
+				latestTimestamps[rec.Key] = rec.Timestamp
+				records = append(records, rec)
+				count++
+			}
+		}
+	}
+
+	sort.Slice(records, func(i, j int) bool {
+		return records[i].Key < records[j].Key
+	})
+
+	return records
+}
+
+// searching for key in given rate
+
+func (mi *Memtables) RangeIterate(start, finish string) []*record.Record {
+
+	var records []*record.Record
+	latestTimestamps := make(map[string]int64)
+
+	var count int
+	for i := 0; i < mi.MaxTables; i++ {
+		list := mi.Tables[i].RangeScan(start, finish)
+
+		for _, rec := range list {
 
 			if rec.Tombstone {
 				continue

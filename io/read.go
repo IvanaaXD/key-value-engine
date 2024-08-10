@@ -64,8 +64,8 @@ func Get(key string) (record.Record, bool) {
 	return record.Record{}, false
 }
 
-func PrefixScan(key string, pageNumber, pageSize int, oldRecords []*record.Record) []record.Record {
-	memtableRecords := inicialize.Memtables.PrefixScan(key, pageNumber, pageSize, oldRecords)
+func PrefixScan(key string, pageNumber, pageSize int) []record.Record {
+	memtableRecords := inicialize.Memtables.PrefixScan(key, pageNumber, pageSize)
 
 	var sstableRecords []*record.Record
 	if len(memtableRecords) < pageNumber*pageSize {
@@ -86,13 +86,53 @@ func PrefixScan(key string, pageNumber, pageSize int, oldRecords []*record.Recor
 	return result
 }
 
-func RangeScan(start, end string, pageNumber, pageSize int, oldRecords []*record.Record) []record.Record {
-	memtableRecords := inicialize.Memtables.RangeScan(start, end, pageNumber, pageSize, oldRecords)
+func RangeScan(start, end string, pageNumber, pageSize int) []record.Record {
+	memtableRecords := inicialize.Memtables.RangeScan(start, end, pageNumber, pageSize)
 
 	var sstableRecords []*record.Record
 	if len(memtableRecords) < pageNumber*pageSize {
 		// sstableRecords = sstable.RangeScanAll(start, end, pageNumber, pageSize, memtableRecords, oldRecords)
 	}
+
+	allRecords := append(memtableRecords, sstableRecords...)
+
+	sort.Slice(allRecords, func(i, j int) bool {
+		return allRecords[i].Key < allRecords[j].Key
+	})
+
+	result := make([]record.Record, len(allRecords))
+	for i, rec := range allRecords {
+		result[i] = *rec
+	}
+
+	return result
+}
+
+func PrefixIterate(key string) []record.Record {
+	memtableRecords := inicialize.Memtables.PrefixIterate(key)
+
+	var sstableRecords []*record.Record
+	// sstableRecords = sstable.PrefixIterateAll(start, end, pageNumber, pageSize, memtableRecords, oldRecords)
+
+	allRecords := append(memtableRecords, sstableRecords...)
+
+	sort.Slice(allRecords, func(i, j int) bool {
+		return allRecords[i].Key < allRecords[j].Key
+	})
+
+	result := make([]record.Record, len(allRecords))
+	for i, rec := range allRecords {
+		result[i] = *rec
+	}
+
+	return result
+}
+
+func RangeIterate(start, end string) []record.Record {
+	memtableRecords := inicialize.Memtables.RangeIterate(start, end)
+
+	var sstableRecords []*record.Record
+	// sstableRecords = sstable.RangeIterateAll(start, end, pageNumber, pageSize, memtableRecords, oldRecords)
 
 	allRecords := append(memtableRecords, sstableRecords...)
 

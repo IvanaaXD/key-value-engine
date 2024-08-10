@@ -3,14 +3,14 @@ package io
 import (
 	"fmt"
 	"github.com/IvanaaXD/NASP/structures/record"
-	"math"
+	"strings"
 )
 
 func GetRangePage(start, end string, pageNum, pageSize int) {
 
-	var records = RangeScan(start, end, pageNum, pageSize, []*record.Record{})
+	var records = RangeScan(start, end, pageNum, pageSize)
 
-	var numOfRecords int
+	/*var numOfRecords int
 	var numOfPages int
 
 	numOfRecords = pageSize
@@ -31,31 +31,36 @@ func GetRangePage(start, end string, pageNum, pageSize int) {
 			pageNum += movePages
 
 			if movePages == 1 {
-				var newRecords = RangeScan(start, end, movePages, pageSize, GetListOfPointers(records))
+				var newRecords = RangeScan(start, end, movePages, pageSize)
 				records = append(records, newRecords...)
 			}
 
 			continue
 		}
-	}
-}
+	}*/
 
-func GetListOfPointers(listOfRecords []record.Record) []*record.Record {
+	startIndex := (pageNum - 1) * pageSize
+	endIndex := startIndex + pageSize
 
-	pointers := make([]*record.Record, len(listOfRecords))
-
-	for i, rec := range listOfRecords {
-		pointers[i] = &rec
+	if endIndex > len(records) {
+		endIndex = len(records)
 	}
 
-	return pointers
+	if startIndex >= len(records) {
+		fmt.Println("No records found on this page.")
+		return
+	}
+	pageRecords := records[startIndex:endIndex]
+
+	printRecords(pageRecords)
+	//printPage(pageRecords, pageNum, pageSize)
 }
 
 func GetPrefixPage(prefix string, pageNum, pageSize int) {
 
-	var records = PrefixScan(prefix, pageNum, pageSize, []*record.Record{})
+	var records = PrefixScan(prefix, pageNum, pageSize)
 
-	var numOfRecords int
+	/*var numOfRecords int
 	var numOfPages int
 
 	numOfRecords = pageSize
@@ -76,10 +81,83 @@ func GetPrefixPage(prefix string, pageNum, pageSize int) {
 			pageNum += movePages
 
 			if movePages == 1 {
-				var newRecords = PrefixScan(prefix, movePages, pageSize, GetListOfPointers(records))
+				var newRecords = PrefixScan(prefix, movePages, pageSize)
 				records = append(records, newRecords...)
 			}
 
+			continue
+		}
+	}*/
+
+	startIndex := (pageNum - 1) * pageSize
+	endIndex := startIndex + pageSize
+
+	if endIndex > len(records) {
+		endIndex = len(records)
+	}
+
+	if startIndex >= len(records) {
+		fmt.Println("No records found on this page.")
+		return
+	}
+	pageRecords := records[startIndex:endIndex]
+
+	printRecords(pageRecords)
+}
+
+func GetRangeIteratorPage(start, end string) {
+
+	var records = RangeIterate(start, end)
+
+	var numOfRecords int
+	var numOfPages int
+
+	numOfRecords = 1
+
+	numOfPages = len(records)
+	currentPage := 1
+
+	for {
+		var pageRecords []record.Record
+		if (numOfPages-1)*numOfRecords+numOfRecords > len(records) {
+			pageRecords = records[(numOfPages-1)*numOfRecords:]
+		} else {
+			pageRecords = records[(numOfPages-1)*numOfRecords : (numOfPages-1)*numOfRecords+numOfRecords]
+		}
+		movePages := printPage(pageRecords, currentPage, numOfPages)
+		if movePages == 0 {
+			break
+		} else {
+			currentPage += movePages
+			continue
+		}
+	}
+}
+
+func GetPrefixIteratorPage(prefix string) {
+
+	var records = PrefixIterate(prefix)
+
+	var numOfRecords int
+	var numOfPages int
+
+	numOfRecords = 1
+
+	numOfPages = len(records)
+	currentPage := 1
+
+	for {
+		var pageRecords []record.Record
+		if (numOfPages-1)*numOfRecords+numOfRecords > len(records) {
+			pageRecords = records[(numOfPages-1)*numOfRecords:]
+		} else {
+			pageRecords = records[(numOfPages-1)*numOfRecords : (numOfPages-1)*numOfRecords+numOfRecords]
+		}
+		movePages := printPage(pageRecords, currentPage, numOfPages)
+		if movePages == 0 {
+			break
+		} else {
+			currentPage += movePages
 			continue
 		}
 	}
@@ -89,9 +167,7 @@ func printPage(records []record.Record, pageNum, numOfPages int) int {
 	var next string
 
 	fmt.Printf("\n=========================PAGE %d=========================\n", pageNum)
-	for i := 0; i < len(records); i++ {
-		fmt.Printf("%s : %s\n", records[i].Key, string(records[i].Value))
-	}
+	printRecords(records)
 
 	switch pageNum {
 	case 1:
@@ -100,48 +176,37 @@ func printPage(records []record.Record, pageNum, numOfPages int) int {
 			fmt.Println("		                	X	                		")
 		} else {
 			fmt.Println("-------------------------------------------------------")
-			fmt.Println("		                	X	                	   R")
+			fmt.Println("		                	X	                	next")
 		}
 	case numOfPages:
 		fmt.Println("-------------------------------------------------------")
-		fmt.Println("L		                	X	                		")
+		fmt.Println("		                	X	                		")
 	default:
 		fmt.Println("-------------------------------------------------------")
-		fmt.Println("L		                	X	                	   R")
+		fmt.Println("		                	X	                	next")
 	}
 
 	for {
 		fmt.Scanln(&next)
+		next = strings.ToLower(next)
 		switch next {
-		case "r":
+		case "next":
 			if pageNum != numOfPages {
 				return 1
 			}
 			fmt.Println("There are no next pages. Try again... ")
 
-		case "R":
-			if pageNum != numOfPages {
-				return 1
-			}
-			fmt.Println("There are no next pages. Try again... ")
-
-		case "L":
-			if pageNum != 1 {
-				return -1
-			}
-			fmt.Println("There are no previous pages. Try again... ")
-
-		case "l":
-			if pageNum != 1 {
-				return -1
-			}
-			fmt.Println("There are no previous pages. Try again...")
-		case "x":
+		case "stop":
 			return 0
-		case "X":
-			return 0
+
 		default:
-			fmt.Println("Invalid option (l / x / r). Try again...")
+			fmt.Println("Invalid option (next / stop). Try again...")
 		}
+	}
+}
+
+func printRecords(records []record.Record) {
+	for i := 0; i < len(records); i++ {
+		fmt.Printf("%s : %s\n", records[i].Key, string(records[i].Value))
 	}
 }

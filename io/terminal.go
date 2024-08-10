@@ -187,6 +187,70 @@ func GetPageNumAndSize() (int, int) {
 	return pageNum, pageSize
 }
 
+func RangeIterateInput() (string, string) {
+
+	scanner := bufio.NewScanner(os.Stdin)
+	var start, end string
+
+	for {
+		fmt.Print("Start: ")
+		scanner.Scan()
+		start = scanner.Text()
+
+		if len(start) <= 0 {
+			fmt.Println("empty key")
+			continue
+		}
+		if iterator.IsSpecialKey([]byte(start)) {
+			fmt.Println("reserved key")
+			continue
+		}
+		break
+	}
+
+	for {
+		fmt.Print("End: ")
+		scanner.Scan()
+		end = scanner.Text()
+
+		if len(end) <= 0 {
+			fmt.Println("empty key")
+			continue
+		}
+		if iterator.IsSpecialKey([]byte(end)) {
+			fmt.Println("reserved key")
+			continue
+		}
+		break
+	}
+
+	return start, end
+}
+
+func PrefixIterateInput() string {
+
+	scanner := bufio.NewScanner(os.Stdin)
+	var prefix string
+
+	for {
+		fmt.Print("Prefix: ")
+		scanner.Scan()
+		prefix = scanner.Text()
+
+		if len(prefix) <= 0 {
+			fmt.Println("empty key")
+			continue
+		}
+		if iterator.IsSpecialKey([]byte(prefix)) {
+			fmt.Println("reserved key")
+			continue
+		}
+		break
+	}
+
+	return prefix
+}
+
 func GetBF() (string, int, float64) {
 
 	scanner := bufio.NewScanner(os.Stdin)
@@ -532,16 +596,16 @@ func Menu() error {
 			if !IsTBAvailable() {
 				fmt.Println("Too many requests. Please wait.")
 			} else {
-				prefix, pageNum, pageSize := PrefixScanInput()
-				GetPrefixPage(prefix, pageNum, pageSize)
+				prefix := PrefixIterateInput()
+				GetPrefixIteratorPage(prefix)
 			}
 
 		case "7": // RANGE ITERATOR
 			if !IsTBAvailable() {
 				fmt.Println("Too many requests. Please wait.")
 			} else {
-				start, end, pageNum, pageSize := RangeScanInput()
-				GetRangePage(start, end, pageNum, pageSize)
+				start, end := RangeIterateInput()
+				GetRangeIteratorPage(start, end)
 			}
 
 		case "8": // MAKE NEW BF
