@@ -7,7 +7,6 @@ import (
 	"crypto/md5"
 
 	rec "github.com/IvanaaXD/NASP/structures/record"
-	sstable "github.com/IvanaaXD/NASP/structures/sstable"
 )
 
 const emptyNodeHash uint64 = 0
@@ -80,18 +79,6 @@ func MakeMerkleTree(records []rec.Record) MerkleTree {
 	}
 
 	return MerkleTree{Root: *oldNodes[0]}
-}
-
-func MakeMerkleTreeFromData(sstable sstable.SSTableInstance) MerkleTree {
-	allRecords := make([]rec.Record, 0)
-	for {
-		newRecord, recordExists := sstable.ReadRecord()
-		if !recordExists {
-			break
-		}
-		allRecords = append(allRecords, newRecord)
-	}
-	return MakeMerkleTree(allRecords)
 }
 
 func leafNodeSerialization(currentNode merkleTreeNode, serializationUtil *serializationUtil) {
