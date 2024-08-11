@@ -2,12 +2,13 @@ package skip_list
 
 import (
 	"fmt"
-	"github.com/IvanaaXD/NASP/structures/record"
 	"testing"
+
+	"github.com/IvanaaXD/NASP/structures/record"
 )
 
 func Test(t *testing.T) {
-	fmt.Println("\nTest Skip list:\n")
+	fmt.Println("\nTest Skip list:")
 	s := NewSkipList(4)
 
 	// Dodavanje
