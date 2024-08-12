@@ -3,12 +3,13 @@ package memtable
 import (
 	"errors"
 	"fmt"
-	"github.com/IvanaaXD/NASP/app/config"
-	"github.com/IvanaaXD/NASP/structures/record"
-	"github.com/IvanaaXD/NASP/structures/writeAheadLog"
 	"os"
 	"sort"
 	"time"
+
+	"github.com/IvanaaXD/NASP/app/config"
+	"github.com/IvanaaXD/NASP/structures/record"
+	writeaheadlog "github.com/IvanaaXD/NASP/structures/writeAheadLog"
 )
 
 const NullElementKey string = "NULLELEMENT"

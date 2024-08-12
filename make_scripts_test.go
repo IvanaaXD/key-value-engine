@@ -1,12 +1,13 @@
 package main
 
 import (
-	"github.com/IvanaaXD/NASP/app/config"
-	"github.com/IvanaaXD/NASP/inicialize"
-	"github.com/IvanaaXD/NASP/io"
 	"math/rand"
 	"testing"
 	"time"
+
+	"github.com/IvanaaXD/NASP/app/config"
+	"github.com/IvanaaXD/NASP/inicialize"
+	"github.com/IvanaaXD/NASP/io"
 )
 
 // Duzina kljuca i vrednosti

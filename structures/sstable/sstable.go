@@ -340,7 +340,10 @@ func updateSSTableNames(lsmLevel int) {
 		}
 
 		// preimenuj ga
-		os.Rename(sstableFolderPath+"/"+pathsToChange[i], newPath)
+		err := os.Rename(sstableFolderPath+"/"+pathsToChange[i], newPath)
+		if err != nil {
+			log.Println(err)
+		}
 	}
 }
 
@@ -379,16 +382,18 @@ func CreateNewSSTable(records []rec.Record) {
 		for index, record := range records {
 			if index == 0 || index == len(records)-1 {
 				newCreator.currentIndexNumber = FirstOrLastElement
+				newCreator.currentSummaryNumber = FirstOrLastElement
 			}
 			newCreator.WriteRecord(record)
 		}
 
-		merkleFile, err := os.OpenFile(newCreator.Instance.filename+"/merkle.bin", os.O_CREATE|os.O_WRONLY, 0777)
+		merkleTree := merk.MakeMerkleTree(records)
+		merkleBytes := merkleTree.Serialize()
+
+		merkleFile, err := os.OpenFile(newCreator.Instance.filename+"/merkle.bin", os.O_WRONLY|os.O_CREATE, 0777)
 		if err != nil {
 			log.Fatal(err)
 		}
-		merkleTree := merk.MakeMerkleTree(records)
-		merkleBytes := merkleTree.Serialize()
 		merkleFile.Write(merkleBytes)
 		merkleFile.Close()
 
@@ -895,7 +900,7 @@ func (sstable *SSTableCreator) createMetadata() {
 
 		file.Write(metaBytes)
 	} else {
-		file, err := os.OpenFile(sstable.Instance.filename+"/meta.bin", os.O_RDWR, 0777)
+		file, err := os.OpenFile(sstable.Instance.filename+"/meta.bin", os.O_RDWR|os.O_CREATE, 0777)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -918,6 +923,7 @@ func (sstable *SSTableCreator) createMetadata() {
 		metaBytes = append(metaBytes, lastSummaryOffsetBytes...)
 
 		file.Write(metaBytes)
+		file.Close()
 	}
 
 }

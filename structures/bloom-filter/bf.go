@@ -92,15 +92,15 @@ func Deserialize(byteArr []byte) *BloomFilter {
 	byteArr = byteArr[16:]
 
 	bits := make([]byte, int(math.Ceil(float64(m)/8)))
-	copy(bits, byteArr[0:m])
+	copy(bits, byteArr[0:int(math.Ceil(float64(m)/8))])
 
-	byteArr = byteArr[m:]
+	byteArr = byteArr[int(math.Ceil(float64(m)/8)):]
 
 	hashFunctions := make([]HashWithSeed, k)
 	for i := uint64(0); i < k; i++ {
-		seed := byteArr[0:64]
+		seed := byteArr[0:32]
 		hashFunctions[i].Seed = seed
-		byteArr = byteArr[64:]
+		byteArr = byteArr[32:]
 	}
 
 	return &BloomFilter{
