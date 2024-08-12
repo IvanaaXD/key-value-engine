@@ -41,10 +41,10 @@ const (
 	SCALING_FACTOR             = 2
 	COMPACTION_ALGORITHM       = "sizeTiered"
 	SEGMENT_SIZE               = 256
-	DEGREE_OF_DILUTION         = 5     // stepen proredjenosti
-	SST_FILES                  = "one" // one or many
+	DEGREE_OF_DILUTION         = 5      // stepen proredjenosti
+	SST_FILES                  = "many" // one or many
 	SSTABLE_SIZE               = 20
-	COMPRESSION                = "yes" // yes or no
+	COMPRESSION                = "no" // yes or no
 	PREFIX                     = "data/usertables"
 	LSM_MAX_LEVELS             = 4
 	LSM_MAX_TABLES             = 4
@@ -57,8 +57,8 @@ const (
 	TIMESTAMP_START  = 0
 	TOMBSTONE_START  = TIMESTAMP_START + TIMESTAMP_SIZE
 	KEY_SIZE_START   = TOMBSTONE_START + TOMBSTONE_SIZE
-	KEY_START        = TOMBSTONE_START + KEY_SIZE_START
-	VALUE_SIZE_START = KEY_START
+	VALUE_SIZE_START = KEY_SIZE_START + KEY_SIZE_SIZE
+	KEY_START        = VALUE_SIZE_START + VALUE_SIZE_SIZE
 )
 
 type Config struct {
@@ -173,6 +173,7 @@ func NewConfig(filename string) *Config {
 		config.ScalingFactor = SCALING_FACTOR
 		config.SSTableSize = SSTABLE_SIZE
 		config.Prefix = PREFIX
+		config.Compression = COMPRESSION
 		config.TimestampStart = TIMESTAMP_START
 		config.TombstoneStart = TOMBSTONE_START
 		config.KeySizeStart = KEY_SIZE_START
@@ -189,36 +190,6 @@ func NewConfig(filename string) *Config {
 
 	return &config
 }
-
-//func Init() {
-//	yamlPath := ".." + separator + "app" + separator + "config" + separator + "config.yaml"
-//	yamlPathWithoutDots := "app" + separator + "config" + separator + "config.yaml"
-//
-//	var configPath string
-//
-//	if _, err := os.Stat(yamlPath); !errors.Is(err, os.ErrNotExist) {
-//		configPath = yamlPath
-//	} else {
-//		if _, err = os.Stat(yamlPathWithoutDots); !errors.Is(err, os.ErrNotExist) {
-//			configPath = yamlPathWithoutDots
-//		} else {
-//			configPath = yamlPathWithoutDots
-//			f, err1 := os.Create(configPath)
-//			defer f.Close()
-//			if err1 != nil {
-//				panic(err1)
-//			}
-//
-//			out, err := yaml.Marshal(&GlobalConfig)
-//			if err != nil {
-//				panic(err)
-//			}
-//
-//			f.Write(out)
-//		}
-//	}
-//	GlobalConfig = *NewConfig(configPath)
-//}
 
 func getExecutablePath() string {
 	_, filename, _, ok := runtime.Caller(0)

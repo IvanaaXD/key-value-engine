@@ -86,11 +86,11 @@ func RecordToSSTableRecord(inputRecord rec.Record) []byte {
 	ssRecordBytes := make([]byte, 0)
 	normalRecordBytes := rec.RecToBytes(inputRecord)
 	crcValue := CRC32(normalRecordBytes)
-	crcValueBytes := make([]byte, 4)
+	crcValueBytes := make([]byte, 5)
 	writtenBytes := binary.PutUvarint(crcValueBytes, uint64(crcValue))
 	ssRecordBytes = append(ssRecordBytes, crcValueBytes[:writtenBytes]...)
 
-	timestampBytes := make([]byte, 8)
+	timestampBytes := make([]byte, 9)
 	writtenBytes = binary.PutUvarint(timestampBytes, uint64(inputRecord.Timestamp))
 	ssRecordBytes = append(ssRecordBytes, timestampBytes[:writtenBytes]...)
 
@@ -935,7 +935,7 @@ func (sstable *SSTableCreator) WriteRecord(record rec.Record) {
 	}
 
 	if sstable.Instance.isSingleFile {
-		file, err := os.OpenFile(sstable.Instance.filename, os.O_RDWR, 0777)
+		file, err := os.OpenFile(sstable.Instance.filename, os.O_RDWR|os.O_CREATE, 0777)
 		if err != nil {
 			log.Fatal(err)
 		}

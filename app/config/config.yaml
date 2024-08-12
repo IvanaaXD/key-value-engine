@@ -24,7 +24,7 @@ keySizeStart: 13 # korisnik
 ValueSizeStart: 21 # korisnik
 keyStart: 29 # korisnik
 degreeOfDilution: 5 # korisnik
-sstFiles: one # korisnik
+sstFiles: many # korisnik
 lsmLeveledComp: # korisnik
   - 4
   - 10

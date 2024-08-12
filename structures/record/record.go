@@ -31,9 +31,9 @@ func BytesToRec(b []byte) Record {
 	keySize := binary.LittleEndian.Uint64(keySizeBytes)
 	key := string(b[config.GlobalConfig.KeyStart : int64(config.GlobalConfig.KeyStart)+int64(keySize)])
 
-	valueSizeBytes := b[config.GlobalConfig.ValueSizeStart+int(keySize) : config.GlobalConfig.ValueSizeStart+int(keySize)+config.GlobalConfig.ValueSizeSize]
+	valueSizeBytes := b[config.GlobalConfig.ValueSizeStart : config.GlobalConfig.ValueSizeStart+config.GlobalConfig.ValueSizeSize]
 	valueSize := binary.LittleEndian.Uint64(valueSizeBytes)
-	value := b[int64(config.GlobalConfig.ValueSizeStart)+int64(keySize)+int64(config.GlobalConfig.ValueSizeSize) : int64(config.GlobalConfig.ValueSizeStart)+int64(keySize)+int64(config.GlobalConfig.ValueSizeSize)+int64(valueSize)]
+	value := b[int64(config.GlobalConfig.KeyStart)+int64(keySize) : int64(config.GlobalConfig.KeyStart)+int64(keySize)+int64(valueSize)]
 
 	return Record{Key: key, Value: value, Timestamp: int64(timestamp), Tombstone: tombstone}
 }
@@ -64,8 +64,8 @@ func RecToBytes(record Record) []byte {
 
 	result := append(timestampBytes, tombstoneByte)
 	result = append(result, keySizeBytes...)
-	result = append(result, []byte(record.Key)...)
 	result = append(result, valueSizeBytes...)
+	result = append(result, []byte(record.Key)...)
 	result = append(result, record.Value...)
 
 	return result

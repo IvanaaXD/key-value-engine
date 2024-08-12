@@ -9,7 +9,7 @@ import (
 	"github.com/IvanaaXD/NASP/structures/iterator"
 	"github.com/IvanaaXD/NASP/structures/record"
 	skip_list "github.com/IvanaaXD/NASP/structures/skip-list"
-	"os"
+	"github.com/IvanaaXD/NASP/structures/sstable"
 	"sort"
 	"strings"
 )
@@ -94,61 +94,15 @@ func (m *Memtable) Flush() error {
 		return records[i].Key < records[j].Key
 	})
 
-	/*var keyValArray []GTypes.KeyVal[string, elements_db.DatabaseElem]
+	sstable.CreateNewSSTable(records)
 
-	for _, rec := range records {
-		keyVal := GTypes.KeyVal[string, elements_db.DatabaseElem]{
-			Key: rec.Key,
-			Value: elements_db.DatabaseElem{
-				Tombstone: byteBool(rec.Tombstone),
-				Value:     rec.Value,
-				Timestamp: uint64(rec.Timestamp),
-			},
-		}
-		keyValArray = append(keyValArray, keyVal)
-	}
-
-	sstable.CreateSStable(keyValArray, 1)
-
-	if config.GlobalConfig.CompactionAlgorithm == "sizeTiered" {
+	/*if config.GlobalConfig.CompactionAlgorithm == "sizeTiered" {
 		lsm_tree.SizeTieredCompaction(1)
 	} else {
 		lsm_tree.LeveledCompaction(1)
 	}*/
 
-	err := m.WalFlush2()
-	if err != nil {
-		return err
-	}
-
 	fmt.Println("Memtable flushed")
-	return nil
-}
-
-func (m *Memtable) WalFlush2() error {
-
-	size := m.CountMemSize()
-
-	file, err := os.OpenFile(config.GlobalConfig.WalPath, os.O_RDWR, 0644)
-	if err != nil {
-		fmt.Println("Error opening wal.log:", err)
-		return err
-	}
-	defer file.Close()
-
-	_, err = file.Seek(int64(size), 0)
-	if err != nil {
-		fmt.Println("Error seeking in wal.log:", err)
-		return err
-	}
-
-	err = file.Truncate(0)
-	if err != nil {
-		fmt.Println("Error truncating wal.log:", err)
-		return err
-	}
-
-	fmt.Println("WalFlush successful.")
 	return nil
 }
 
@@ -221,6 +175,10 @@ func (m *Memtable) GetIterator() iterator.Iterator {
 func (m *Memtable) PrefixScan(prefix string) []*record.Record {
 
 	iter := m.GetIterator()
+	if iter == nil {
+		return make([]*record.Record, 0)
+	}
+
 	iter.SetIndex()
 	records := make([]*record.Record, 0)
 
@@ -239,6 +197,10 @@ func (m *Memtable) PrefixScan(prefix string) []*record.Record {
 func (m *Memtable) RangeScan(start, finish string) []*record.Record {
 
 	iter := m.GetIterator()
+	if iter == nil {
+		return make([]*record.Record, 0)
+	}
+
 	records := make([]*record.Record, 0)
 
 	for iter.Next() {

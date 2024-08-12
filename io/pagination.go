@@ -8,7 +8,7 @@ import (
 
 func GetRangePage(start, end string, pageNum, pageSize int) {
 
-	var records = RangeScan(start, end, pageNum, pageSize)
+	var records = RangeScan(start, end)
 
 	/*var numOfRecords int
 	var numOfPages int
@@ -50,15 +50,14 @@ func GetRangePage(start, end string, pageNum, pageSize int) {
 		fmt.Println("No records found on this page.")
 		return
 	}
-	pageRecords := records[startIndex:endIndex]
 
+	pageRecords := records[startIndex:endIndex]
 	printRecords(pageRecords)
-	//printPage(pageRecords, pageNum, pageSize)
 }
 
 func GetPrefixPage(prefix string, pageNum, pageSize int) {
 
-	var records = PrefixScan(prefix, pageNum, pageSize)
+	var records = PrefixScan(prefix)
 
 	/*var numOfRecords int
 	var numOfPages int
@@ -100,8 +99,8 @@ func GetPrefixPage(prefix string, pageNum, pageSize int) {
 		fmt.Println("No records found on this page.")
 		return
 	}
-	pageRecords := records[startIndex:endIndex]
 
+	pageRecords := records[startIndex:endIndex]
 	printRecords(pageRecords)
 }
 

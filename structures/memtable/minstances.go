@@ -209,20 +209,16 @@ func (mi *Memtables) Delete(key string) error {
 
 // searching for key with given prefix
 
-func (mi *Memtables) PrefixScan(prefix string, pageNumber, pageSize int) []*record.Record {
+func (mi *Memtables) PrefixScan(prefix string) []*record.Record {
 
 	var records []*record.Record
 	latestTimestamps := make(map[string]int64)
 
 	var count int
-outerLoop:
 	for i := 0; i < mi.MaxTables; i++ {
 		list := mi.Tables[i].PrefixScan(prefix)
 
 		for _, rec := range list {
-			if count >= pageSize*pageNumber {
-				break outerLoop
-			}
 
 			if rec.Tombstone {
 				continue
@@ -298,21 +294,16 @@ func replaceRecord(records []*record.Record, newRecord *record.Record) {
 
 // searching for key in given rate
 
-func (mi *Memtables) RangeScan(start, finish string, pageNumber, pageSize int) []*record.Record {
+func (mi *Memtables) RangeScan(start, finish string) []*record.Record {
 
 	var records []*record.Record
 	latestTimestamps := make(map[string]int64)
 
 	var count int
-outerLoop:
 	for i := 0; i < mi.MaxTables; i++ {
 		list := mi.Tables[i].RangeScan(start, finish)
 
 		for _, rec := range list {
-			if count >= pageSize*pageNumber {
-				break outerLoop
-			}
-
 			if rec.Tombstone {
 				continue
 			}
