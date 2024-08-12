@@ -375,6 +375,7 @@ func CreateNewSSTable(records []rec.Record) {
 		newCreator.createSummary()
 		newCreator.createMerkle(records)
 	} else {
+		os.Mkdir(newCreator.Instance.filename, 0777)
 		for index, record := range records {
 			if index == 0 || index == len(records)-1 {
 				newCreator.currentIndexNumber = FirstOrLastElement
