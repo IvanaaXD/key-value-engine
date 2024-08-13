@@ -36,7 +36,7 @@ func Init() {
 		defer f.Close()
 	}
 
-	Memtables = memtable.NewMemtables(&config.GlobalConfig)
+	Memtables = memtable.NewMemtables()
 	Cache = cache.NewCache(config.GlobalConfig.CacheCapacity)
 	TokenBucket = tokenbucketv2.MakeTokenBucket(config.GlobalConfig.TokenNumber, config.GlobalConfig.TokenRefreshTime)
 

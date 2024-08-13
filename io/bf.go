@@ -65,7 +65,7 @@ func WriteBF(key string, value []byte) error {
 	return nil
 }
 
-func BFHasKey(key string) bool {
+func BFHasKey(key string, value []byte) bool {
 
 	key = config.GlobalConfig.BFPrefix + key
 
@@ -76,7 +76,7 @@ func BFHasKey(key string) bool {
 
 	bf := bloom_filter.Deserialize(rec.Value)
 
-	found := bf.Read(rec.Value)
+	found := bf.Read(value)
 
 	return found
 }

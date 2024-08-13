@@ -19,22 +19,25 @@ type Memtables struct {
 	Last      int
 	MaxTables int
 	Tables    []*Memtable
+	Wal       *writeaheadlog.WriteAheadLog
 }
 
-func NewMemtables(config *config.Config) *Memtables {
+func NewMemtables() *Memtables {
 
-	structName := config.StructureType
-	n := config.MemtableNum
+	config.Init()
+	structName := config.GlobalConfig.StructureType
+	n := config.GlobalConfig.MemtableNum
 
 	mi := &Memtables{}
 	mi.Tables = make([]*Memtable, 0)
 	mi.MaxTables = int(n)
 
 	for i := 0; i < int(n); i++ {
-		m := NewMemtable(config, structName)
+		m := NewMemtable(structName)
 		mi.Tables = append(mi.Tables, m)
 	}
 
+	mi.Wal = writeaheadlog.InitializeWAL()
 	exists := CheckWal()
 
 	if exists {
@@ -70,10 +73,8 @@ func (mi *Memtables) Recover() error {
 	var i = 0
 	currentMemtable := mi.Tables[i]
 
-	wal := writeaheadlog.InitializeWAL()
-
 	for {
-		rec := wal.ReadRecord(i)
+		rec := mi.Wal.ReadRecord(i)
 
 		recc := record.Record{Key: NullElementKey, Tombstone: true}
 		if rec.Key == recc.Key {
@@ -82,6 +83,14 @@ func (mi *Memtables) Recover() error {
 
 		if currentMemtable.maxSize == currentMemtable.Structure.GetSize() {
 			i++
+			i = i % mi.MaxTables
+			if i == mi.Last {
+				err := mi.Flush()
+				if err != nil {
+					fmt.Println("Error flushing: ", err)
+					return err
+				}
+			}
 			currentMemtable = mi.Tables[i]
 		}
 
@@ -140,6 +149,7 @@ func (mi *Memtables) Flush() error {
 		return err
 	}
 
+	mi.Wal.DeleteSerializedRecords(mi.Last)
 	mi.Last = (mi.Last + 1) % mi.MaxTables
 
 	return nil

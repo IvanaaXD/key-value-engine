@@ -52,7 +52,6 @@ func GetInput(isNewWrite bool) (string, []byte) {
 }
 
 func GetKey() string {
-
 	scanner := bufio.NewScanner(os.Stdin)
 	var key string
 
@@ -71,7 +70,46 @@ func GetKey() string {
 		}
 		break
 	}
+
 	return key
+}
+
+func GetKeyValueBF() (string, []byte) {
+
+	scanner := bufio.NewScanner(os.Stdin)
+	var key string
+	var value string
+
+	for {
+		fmt.Print("Key: ")
+		scanner.Scan()
+		key = scanner.Text()
+
+		if len(key) <= 0 {
+			fmt.Println("empty key")
+			continue
+		}
+		if iterator.IsSpecialKey([]byte(key)) {
+			fmt.Println("reserved key")
+			continue
+		}
+		break
+	}
+
+	for {
+		fmt.Print("Value: ")
+		scanner.Scan()
+		value = scanner.Text()
+
+		if len(value) <= 0 {
+			fmt.Println("empty value")
+			continue
+		}
+
+		break
+	}
+
+	return key, []byte(value)
 }
 
 func RangeScanInput() (string, string, int, int) {
@@ -636,13 +674,14 @@ func Menu() error {
 			if !IsTBAvailable() {
 				fmt.Println("Too many requests. Please wait.")
 			} else {
-				key := GetKey()
+				key, value := GetKeyValueBF()
 
-				ok := BFHasKey(key)
+				ok := BFHasKey(key, value)
 				if !ok {
 					fmt.Println("Record does not exist")
+				} else {
+					fmt.Println("Record may exist")
 				}
-				fmt.Println("Record may exist")
 			}
 
 		case "11": // DELETE BF

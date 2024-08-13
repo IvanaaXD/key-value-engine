@@ -28,7 +28,7 @@ const (
 	CMS_EPSILON                = 0.001
 	CMS_DELTA                  = 0.001
 	CACHE_CAP                  = 100
-	MEMTABLE_SIZE              = 10
+	MEMTABLE_SIZE              = 1000
 	MEMTABLE_NUM               = 5
 	STRUCTURE_TYPE             = "btree"
 	B_TREE_ORDER               = 3
@@ -192,7 +192,7 @@ func NewConfig(filename string) *Config {
 }
 
 func getExecutablePath() string {
-	_, filename, _, ok := runtime.Caller(0)
+	_, filename, _, ok := runtime.Caller(1)
 	if !ok {
 		panic("Failed to get the executable path.")
 	}
@@ -201,8 +201,8 @@ func getExecutablePath() string {
 
 func Init() {
 	executablePath := getExecutablePath()
-	//yamlPath := filepath.Join(executablePath, "app", "config", "config.yaml")
-	yamlPath := executablePath
+	yamlPath := filepath.Join(executablePath, "config.yaml")
+	//yamlPath := executablePath
 
 	if _, err := os.Stat(yamlPath); errors.Is(err, os.ErrNotExist) {
 		f, err := os.Create(yamlPath)

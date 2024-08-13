@@ -29,7 +29,7 @@ func TestInsert100(t *testing.T) {
 	inicialize.Init()
 
 	config.GlobalConfig.Compression = "no"
-	config.GlobalConfig.MemtableSize = 30
+	config.GlobalConfig.MemtableSize = 1000
 	config.GlobalConfig.TokenNumber = 1000
 
 	keys := generateKey(100)

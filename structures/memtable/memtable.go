@@ -21,20 +21,21 @@ type Memtable struct {
 
 // new memtable
 
-func NewMemtable(config *config.Config, strucName string) *Memtable {
+func NewMemtable(strucName string) *Memtable {
 	var structure Structure
 
-	maxSize := config.MemtableSize
+	config.Init()
+	maxSize := config.GlobalConfig.MemtableSize
 
 	switch strucName {
 	case "btree":
-		structure = b_tree.NewBTree(config.BTreeOrder, maxSize)
+		structure = b_tree.NewBTree(config.GlobalConfig.BTreeOrder, maxSize)
 	case "skiplist":
-		structure = skip_list.NewSkipList(int(config.MemtableSize))
+		structure = skip_list.NewSkipList(int(maxSize))
 	case "hashmap":
-		structure = hash_map.NewHashMap(uint32(config.MemtableSize))
+		structure = hash_map.NewHashMap(uint32(maxSize))
 	default:
-		structure = skip_list.NewSkipList(int(config.MemtableSize))
+		structure = skip_list.NewSkipList(int(maxSize))
 	}
 
 	mTable := Memtable{maxSize, structure}

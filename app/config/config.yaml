@@ -1,8 +1,8 @@
 cacheCapacity: 100 # korisnik
-memtableSize: 2 # korisnik
-memtableNum: 2 # korisnik
+memtableSize: 100 # korisnik
+memtableNum: 5 # korisnik
 structureType: hashmap # korisnik
-tokenNumber: 3 # korisnik
+tokenNumber: 1000 # korisnik
 tokenRefreshTime: 2 # korisnik
 maxEntrySize: 1024
 segmentSize: 256 # korisnik
