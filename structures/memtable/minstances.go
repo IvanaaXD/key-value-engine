@@ -111,6 +111,8 @@ func (mi *Memtables) Recover() error {
 
 func (mi *Memtables) Write(rec record.Record) error {
 
+	mi.Wal.WriteRecord(rec, mi.Current)
+
 	m := mi.Tables[mi.Current]
 
 	if m.maxSize == m.Structure.GetSize() {
@@ -185,8 +187,9 @@ func (mi *Memtables) Read(key string) (record.Record, int, bool) {
 	return newestRecord, index, true
 }
 
-func (mi *Memtables) Delete(key string) error {
+func (mi *Memtables) Delete(key string, timestamp int64) error {
 
+	mi.Wal.WriteRecord(record.Record{Key: key, Value: []byte("d"), Timestamp: timestamp, Tombstone: true}, mi.Current)
 	rec, id, ok := mi.Read(key)
 
 	if ok {

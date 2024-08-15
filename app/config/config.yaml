@@ -5,7 +5,7 @@ structureType: hashmap # korisnik
 tokenNumber: 1000 # korisnik
 tokenRefreshTime: 2 # korisnik
 maxEntrySize: 1024
-segmentSize: 256 # korisnik
+segmentSize: 65536 # korisnik
 crcSize: 4 # korisnik
 timestampSize: 8 # korisnik
 compression: no # korisnik
@@ -24,7 +24,7 @@ keySizeStart: 13 # korisnik
 ValueSizeStart: 21 # korisnik
 keyStart: 29 # korisnik
 degreeOfDilution: 5 # korisnik
-sstFiles: many # korisnik
+sstFiles: one # korisnik
 lsmLeveledComp: # korisnik
   - 4
   - 10

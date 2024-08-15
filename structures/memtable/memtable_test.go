@@ -2,9 +2,11 @@ package memtable
 
 import (
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/IvanaaXD/NASP/app/config"
 	"github.com/IvanaaXD/NASP/structures/record"
-	"testing"
 )
 
 func add(mi *Memtables) {
@@ -68,9 +70,9 @@ func testLogicalDelete(t *testing.T, structure string) {
 	config.Init()
 	config.GlobalConfig.StructureType = structure
 
-	mts := NewMemtables(&config.GlobalConfig)
+	mts := NewMemtables()
 	add(mts)
-	err := mts.Delete("5")
+	err := mts.Delete("5", time.Now().UnixNano())
 	if err != nil {
 		t.Errorf("error: [%s] '5' should be in structure", structure)
 	}
@@ -95,7 +97,7 @@ func TestTableSwitch(t *testing.T) {
 
 	config.GlobalConfig.MemtableNum = 4
 	config.GlobalConfig.MemtableSize = 3
-	mts := NewMemtables(&config.GlobalConfig)
+	mts := NewMemtables()
 	add(mts)
 	err := mts.Write(record.Record{
 		Key:       ("a"),

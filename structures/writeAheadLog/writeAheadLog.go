@@ -44,7 +44,7 @@ func (wal *WriteAheadLog) increaseFileIndex() {
 
 	intIndeks, err := strconv.Atoi(indeks[0])
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 	intIndeks += 1
 	strIndeks := fmt.Sprintf("%04d", intIndeks)
@@ -55,36 +55,44 @@ func CRC32(data []byte) uint32 {
 	return crc32.ChecksumIEEE(data)
 }
 
+func (wal *WriteAheadLog) checkIfLastWalFile() bool {
+	allFiles, err := os.ReadDir(walFolderName)
+	if err != nil {
+		log.Panic(err)
+	}
+	return strings.Contains(wal.Filename, allFiles[len(allFiles)-1].Name())
+}
+
 // Pomocna funkcija cita citavu vrednost nekog polja (timestamp, keyLen...)
 func (wal *WriteAheadLog) readNextValue(bytesToRead int, isCRCBeingRead bool) []byte {
 	buffer := make([]byte, bytesToRead)
 
 	file, err := os.OpenFile(wal.Filename, os.O_RDONLY, 0777)
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 	defer file.Close()
 
 	file.Seek(wal.CurrentOffset, 0)
 
 	bytesRead, err := file.Read(buffer)
-	if err == io.EOF && isCRCBeingRead {
+	if err == io.EOF && isCRCBeingRead && wal.checkIfLastWalFile() {
 		return make([]byte, 0)
-	} else if err != nil {
-		log.Fatal(err)
+	} else if err != nil && err != io.EOF {
+		log.Panic(err)
 	}
 
 	if bytesRead != bytesToRead {
 		wal.increaseFileIndex()
 		secondFile, err := os.OpenFile(wal.Filename, os.O_RDONLY, 0777)
 		if err != nil {
-			log.Fatal(err)
+			log.Panic(err)
 		}
 		defer secondFile.Close()
 
-		secondBytesRead, err := file.Read(buffer[bytesRead:])
+		secondBytesRead, err := secondFile.Read(buffer[bytesRead:])
 		if secondBytesRead+bytesRead != bytesToRead {
-			log.Fatal(err)
+			log.Panic(err)
 		}
 		wal.CurrentOffset = int64(secondBytesRead)
 	} else {
@@ -137,7 +145,7 @@ func (wal *WriteAheadLog) ReadRecord(memtableIndex int) record.Record {
 func (wal *WriteAheadLog) WriteRecord(inputRecord record.Record, memtableIndex int) {
 	file, err := os.OpenFile(wal.Filename, os.O_APPEND|os.O_CREATE, 0777)
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 	defer file.Close()
 
@@ -151,7 +159,7 @@ func (wal *WriteAheadLog) WriteRecord(inputRecord record.Record, memtableIndex i
 	if freeSpace >= len(allBytes) {
 		_, err = file.Write(allBytes)
 		if err != nil {
-			log.Fatal(err)
+			log.Panic(err)
 		}
 		wal.CurrentOffset += int64(len(allBytes))
 	} else {
@@ -160,20 +168,20 @@ func (wal *WriteAheadLog) WriteRecord(inputRecord record.Record, memtableIndex i
 
 		_, err = file.Write(part1)
 		if err != nil {
-			log.Fatal(err)
+			log.Panic(err)
 		}
 
 		wal.increaseFileIndex()
 
 		file2, err := os.OpenFile(wal.Filename, os.O_APPEND|os.O_CREATE, 0777)
 		if err != nil {
-			log.Fatal(err)
+			log.Panic(err)
 		}
 		defer file2.Close()
 
 		_, err = file2.Write(part2)
 		if err != nil {
-			log.Fatal(err)
+			log.Panic(err)
 		}
 		wal.CurrentOffset = int64(len(part2))
 	}
@@ -184,7 +192,7 @@ func (wal *WriteAheadLog) WriteRecord(inputRecord record.Record, memtableIndex i
 func (wal *WriteAheadLog) DeleteSerializedRecords(memtableIndex int) {
 	allFilesBeforeDeletion, err := os.ReadDir(walFolderName)
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 
 	deleterWal := InitializeWAL()
@@ -221,13 +229,18 @@ func (wal *WriteAheadLog) DeleteSerializedRecords(memtableIndex int) {
 
 	allFilesAfterDeletion, err := os.ReadDir(walFolderName)
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 
 	wal.Filename = walFolderName + allFilesAfterDeletion[len(allFilesAfterDeletion)-1].Name()
+	if !strings.Contains(wal.Filename, "wal_") {
+		wal.Filename = walFolderName + "wal_0001.log"
+		os.Create(wal.Filename)
+	}
+
 	lastFileInfo, err := os.Stat(wal.Filename)
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 	wal.CurrentOffset = lastFileInfo.Size()
 	wal.NumSavedElements[memtableIndex] = 0
