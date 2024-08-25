@@ -15,7 +15,7 @@ import (
 var Memtables *memtable.Memtables
 var Cache *cache.Cache
 
-var TokenBucket *tokenbucketv2.TokenBucket
+var TokenBucket *tokenbucket.TokenBucket
 
 func Init() {
 
@@ -38,7 +38,7 @@ func Init() {
 
 	Memtables = memtable.NewMemtables()
 	Cache = cache.NewCache(config.GlobalConfig.CacheCapacity)
-	TokenBucket = tokenbucketv2.MakeTokenBucket(config.GlobalConfig.TokenNumber, config.GlobalConfig.TokenRefreshTime)
+	TokenBucket = tokenbucket.MakeTokenBucket(config.GlobalConfig.TokenNumber, config.GlobalConfig.TokenRefreshTime)
 
 	key := config.GlobalConfig.TBPrefix + "key"
 	value := TokenBucket.Serialize()

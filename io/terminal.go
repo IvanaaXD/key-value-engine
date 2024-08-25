@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/IvanaaXD/NASP/app/config"
 	"github.com/IvanaaXD/NASP/structures/iterator"
-	tokenbucketv2 "github.com/IvanaaXD/NASP/structures/tokenBucket"
+	"github.com/IvanaaXD/NASP/structures/tokenBucket"
 	"os"
 	"strconv"
 	"time"
@@ -506,7 +506,7 @@ func IsTBAvailable() bool {
 	rec, _ := Get(key)
 
 	value := rec.Value
-	token := tokenbucketv2.Deserialize(value)
+	token := tokenbucket.Deserialize(value)
 
 	available := token.TokensAvailable()
 
