@@ -1,4 +1,4 @@
-package tokenbucketv2
+package tokenbucket
 
 import (
 	"encoding/binary"

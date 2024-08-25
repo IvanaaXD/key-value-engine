@@ -105,29 +105,30 @@ func GetPrefixPage(prefix string, pageNum, pageSize int) {
 }
 
 func GetRangeIteratorPage(start, end string) {
-
 	var records = RangeIterate(start, end)
 
-	var numOfRecords int
-	var numOfPages int
-
-	numOfRecords = 1
-
-	numOfPages = len(records)
+	var numOfRecords = 1
+	var numOfPages = (len(records) + numOfRecords - 1) / numOfRecords
 	currentPage := 1
 
 	for {
 		var pageRecords []record.Record
-		if (numOfPages-1)*numOfRecords+numOfRecords > len(records) {
-			pageRecords = records[(numOfPages-1)*numOfRecords:]
-		} else {
-			pageRecords = records[(numOfPages-1)*numOfRecords : (numOfPages-1)*numOfRecords+numOfRecords]
+		startIdx := (currentPage - 1) * numOfRecords
+		endIdx := startIdx + numOfRecords
+		if endIdx > len(records) {
+			endIdx = len(records)
 		}
+		pageRecords = records[startIdx:endIdx]
+
 		movePages := printPage(pageRecords, currentPage, numOfPages)
 		if movePages == 0 {
 			break
 		} else {
 			currentPage += movePages
+			if currentPage > numOfPages || currentPage < 1 {
+				println("No more pages!")
+				break
+			}
 			continue
 		}
 	}
@@ -137,26 +138,28 @@ func GetPrefixIteratorPage(prefix string) {
 
 	var records = PrefixIterate(prefix)
 
-	var numOfRecords int
-	var numOfPages int
-
-	numOfRecords = 1
-
-	numOfPages = len(records)
+	var numOfRecords = 1
+	var numOfPages = (len(records) + numOfRecords - 1) / numOfRecords
 	currentPage := 1
 
 	for {
 		var pageRecords []record.Record
-		if (numOfPages-1)*numOfRecords+numOfRecords > len(records) {
-			pageRecords = records[(numOfPages-1)*numOfRecords:]
-		} else {
-			pageRecords = records[(numOfPages-1)*numOfRecords : (numOfPages-1)*numOfRecords+numOfRecords]
+		startIdx := (currentPage - 1) * numOfRecords
+		endIdx := startIdx + numOfRecords
+		if endIdx > len(records) {
+			endIdx = len(records)
 		}
+		pageRecords = records[startIdx:endIdx]
+
 		movePages := printPage(pageRecords, currentPage, numOfPages)
 		if movePages == 0 {
 			break
 		} else {
 			currentPage += movePages
+			if currentPage > numOfPages || currentPage < 1 {
+				println("No more pages!")
+				break
+			}
 			continue
 		}
 	}

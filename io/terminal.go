@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/IvanaaXD/NASP/app/config"
 	"github.com/IvanaaXD/NASP/structures/iterator"
-	tokenbucketv2 "github.com/IvanaaXD/NASP/structures/tokenBucket"
+	"github.com/IvanaaXD/NASP/structures/tokenBucket"
 	"os"
 	"strconv"
 	"time"
@@ -506,7 +506,7 @@ func IsTBAvailable() bool {
 	rec, _ := Get(key)
 
 	value := rec.Value
-	token := tokenbucketv2.Deserialize(value)
+	token := tokenbucket.Deserialize(value)
 
 	available := token.TokensAvailable()
 
@@ -614,14 +614,6 @@ func Menu() error {
 				}
 			}
 
-		case "5": // PREFIX SCAN
-			if !IsTBAvailable() {
-				fmt.Println("Too many requests. Please wait.")
-			} else {
-				prefix, pageNum, pageSize := PrefixScanInput()
-				GetPrefixPage(prefix, pageNum, pageSize)
-			}
-
 		case "4": // RANGE SCAN
 			if !IsTBAvailable() {
 				fmt.Println("Too many requests. Please wait.")
@@ -630,20 +622,28 @@ func Menu() error {
 				GetRangePage(start, end, pageNum, pageSize)
 			}
 
-		case "6": // PREFIX ITERATOR
+		case "5": // PREFIX SCAN
 			if !IsTBAvailable() {
 				fmt.Println("Too many requests. Please wait.")
 			} else {
-				prefix := PrefixIterateInput()
-				GetPrefixIteratorPage(prefix)
+				prefix, pageNum, pageSize := PrefixScanInput()
+				GetPrefixPage(prefix, pageNum, pageSize)
 			}
 
-		case "7": // RANGE ITERATOR
+		case "6": // RANGE ITERATOR
 			if !IsTBAvailable() {
 				fmt.Println("Too many requests. Please wait.")
 			} else {
 				start, end := RangeIterateInput()
 				GetRangeIteratorPage(start, end)
+			}
+
+		case "7": // PREFIX ITERATOR
+			if !IsTBAvailable() {
+				fmt.Println("Too many requests. Please wait.")
+			} else {
+				prefix := PrefixIterateInput()
+				GetPrefixIteratorPage(prefix)
 			}
 
 		case "8": // MAKE NEW BF

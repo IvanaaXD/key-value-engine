@@ -346,7 +346,7 @@ func UpdateSSTableNames(lsmLevel int) {
 	// iteriraj u obrnutom redosledu (da ne bi doslo do errora)
 	for i := len(pathsToChange) - 1; i >= 0; i-- {
 		// podeli "XXXXsstableYYYY[.bin]"
-		splitPath := strings.Split(pathsToChange[i], "sstable")
+		splitPath := strings.Split(pathsToChange[i], "sstables")
 		// uzmi YYYY
 		oldIndex := splitPath[1][:4]
 		// pretvori indeks u broj i povecaj ga za jedan

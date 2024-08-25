@@ -1,4 +1,4 @@
-package sstable
+package mapp
 
 import (
 	"encoding/binary"
