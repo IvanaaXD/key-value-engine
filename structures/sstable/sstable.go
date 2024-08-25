@@ -419,13 +419,12 @@ func CreateNewSSTable(records []rec.Record) {
 		newCreator.CreateSummary()
 		newCreator.CreateMerkle(records)
 	} else {
-		for index, record := range records {
-			if index == 0 || index == len(records)-1 {
-				newCreator.currentIndexNumber = FirstOrLastElement
-				newCreator.currentSummaryNumber = FirstOrLastElement
-			}
+		for _, record := range records {
 			newCreator.WriteRecord(record)
 		}
+
+		newCreator.CreateIndex()
+		newCreator.CreateSummary()
 
 		merkleTree := merk.MakeMerkleTree(records)
 		merkleBytes := merkleTree.Serialize()
@@ -821,7 +820,69 @@ func (sstable *SSTableCreator) CreateSummary() {
 			previousKey = indexKey
 		}
 	} else {
-		// TO-DO: add support for multifile sstable
+		summaryFile, err := os.OpenFile(sstable.Instance.filename+"/summary.bin", os.O_RDWR, 0777)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer summaryFile.Close()
+
+		sstable.Instance.summaryBeginOffset = 0
+
+		var previousKey string
+		sstable.Instance.currentOffset = 0
+		sstable.currentIndexOffset = 0
+		sstable.currentSummaryNumber = 0
+		isFirstOrLast := true
+
+		for {
+			offsetAtBeginning := sstable.Instance.currentOffset
+			indexKey, isRead := sstable.Instance.readIndexRecord()
+			offsetAtEnd := sstable.Instance.currentOffset
+
+			if !isRead {
+				finalKey := previousKey
+
+				keyLength := uint64(len(finalKey))
+				keyLengthBytes := make([]byte, 8)
+				binary.LittleEndian.PutUint64(keyLengthBytes, keyLength)
+
+				offsetBytes := make([]byte, 8)
+				binary.LittleEndian.PutUint64(offsetBytes, sstable.currentIndexOffset)
+
+				summaryBytes := make([]byte, 0)
+				summaryBytes = append(summaryBytes, keyLengthBytes...)
+				summaryBytes = append(summaryBytes, []byte(finalKey)...)
+				summaryBytes = append(summaryBytes, offsetBytes...)
+
+				summaryFile.Write(summaryBytes)
+				break
+			}
+
+			if isFirstOrLast || sstable.currentSummaryNumber == config.DEGREE_OF_DILUTION-1 {
+				finalKeyBytes := []byte(indexKey)
+				keyLength := uint64(len(indexKey))
+
+				keyLengthBytes := make([]byte, 8)
+				binary.LittleEndian.PutUint64(keyLengthBytes, keyLength)
+
+				offsetBytes := make([]byte, 8)
+				binary.LittleEndian.PutUint64(offsetBytes, sstable.currentIndexOffset)
+
+				summaryBytes := make([]byte, 0)
+				summaryBytes = append(summaryBytes, keyLengthBytes...)
+				summaryBytes = append(summaryBytes, finalKeyBytes...)
+				summaryBytes = append(summaryBytes, offsetBytes...)
+
+				summaryFile.Write(summaryBytes)
+
+				sstable.currentSummaryNumber = 0
+			} else {
+				sstable.currentSummaryNumber += 1
+			}
+
+			sstable.currentIndexOffset += uint64(offsetAtEnd) - uint64(offsetAtBeginning)
+			previousKey = indexKey
+		}
 	}
 
 }
@@ -908,7 +969,72 @@ func (sstable *SSTableCreator) CreateIndex() {
 			previousRecord = record
 		}
 	} else {
-		// TO-DO: add support for multifile sstable
+		indexFile, err := os.OpenFile(sstable.Instance.filename+"/index.bin", os.O_RDWR|os.O_CREATE, 0777)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer indexFile.Close()
+
+		sstable.Instance.indexBeginOffset = 0
+
+		sstable.Instance.currentOffset = 0
+		sstable.currentDataOffset = 0
+		sstable.currentIndexNumber = 0
+		recordsToRead := true
+		isFirstOrLast := true
+
+		var previousRecord rec.Record
+		for recordsToRead {
+
+			offsetAtBeginning := sstable.Instance.currentOffset
+			record, isRead := sstable.Instance.ReadRecord()
+			offsetAtEnd := sstable.Instance.currentOffset
+
+			if !isRead {
+				finalKey := previousRecord.Key
+
+				keyLength := uint64(len(finalKey))
+				keyLengthBytes := make([]byte, 8)
+				binary.LittleEndian.PutUint64(keyLengthBytes, keyLength)
+
+				offsetBytes := make([]byte, 8)
+				binary.LittleEndian.PutUint64(offsetBytes, sstable.currentDataOffset)
+
+				indexBytes := make([]byte, 0)
+				indexBytes = append(indexBytes, keyLengthBytes...)
+				indexBytes = append(indexBytes, []byte(finalKey)...)
+				indexBytes = append(indexBytes, offsetBytes...)
+
+				indexFile.Write(indexBytes)
+				break
+			}
+
+			if isFirstOrLast || sstable.currentIndexNumber == config.DEGREE_OF_DILUTION-1 {
+				isFirstOrLast = false
+				finalKey := record.Key
+
+				keyLength := uint64(len(finalKey))
+				keyLengthBytes := make([]byte, 8)
+				binary.LittleEndian.PutUint64(keyLengthBytes, keyLength)
+
+				offsetBytes := make([]byte, 8)
+				binary.LittleEndian.PutUint64(offsetBytes, sstable.currentDataOffset)
+
+				indexBytes := make([]byte, 0)
+				indexBytes = append(indexBytes, keyLengthBytes...)
+				indexBytes = append(indexBytes, []byte(finalKey)...)
+				indexBytes = append(indexBytes, offsetBytes...)
+
+				indexFile.Write(indexBytes)
+
+				sstable.currentIndexNumber = 0
+			} else {
+				sstable.currentIndexNumber += 1
+			}
+
+			sstable.currentDataOffset += uint64(offsetAtEnd) - uint64(offsetAtBeginning)
+			previousRecord = record
+		}
 	}
 
 }
@@ -996,9 +1122,7 @@ func (sstable *SSTableCreator) CreateMetadata() {
 
 }
 
-// Funkcija upisuje prosledjen record na sledece mesto u SSTabeli. Koristice se za LSM
-// AKO JE SINGLE FILE SSTABELA, DODAJE SE SAMO U BLOOMFILTER I DATA DEO!!!
-// AKO JE MULTI FILE SSTABELA, DODAJE SE U SVE!!!
+// Funkcija upisuje prosledjen record na sledece mesto u SSTabeli i dodaje je u bloomfilter te sstabele. Koristice se za LSM
 func (sstable *SSTableCreator) WriteRecord(record rec.Record) {
 	config.Init()
 	dict := compress.NewCompressionDict()
@@ -1063,68 +1187,6 @@ func (sstable *SSTableCreator) WriteRecord(record rec.Record) {
 			bfFile.Close()
 		}
 
-		// Summary
-		{
-
-			if sstable.currentSummaryNumber == (config.DEGREE_OF_DILUTION*config.DEGREE_OF_DILUTION-1) || sstable.currentSummaryNumber == FirstOrLastElement {
-				summaryPath := sstable.Instance.filename + "/summary.bin"
-				summaryFile, err := os.OpenFile(summaryPath, os.O_APPEND|os.O_CREATE, 0777)
-				if err != nil {
-					log.Fatal(err)
-				}
-
-				finalKeyBytes := []byte(record.Key)
-				keyLength := uint64(len(record.Key))
-
-				keyLengthBytes := make([]byte, 8)
-				binary.LittleEndian.PutUint64(keyLengthBytes, keyLength)
-
-				offsetBytes := make([]byte, 8)
-				binary.LittleEndian.PutUint64(offsetBytes, sstable.currentIndexOffset)
-
-				summaryBytes := make([]byte, 0)
-				summaryBytes = append(summaryBytes, keyLengthBytes...)
-				summaryBytes = append(summaryBytes, finalKeyBytes...)
-				summaryBytes = append(summaryBytes, offsetBytes...)
-
-				summaryFile.Write(summaryBytes)
-				summaryFile.Close()
-
-				sstable.currentSummaryNumber = 0
-			}
-		}
-
-		// Index
-		{
-			if sstable.currentIndexNumber == config.DEGREE_OF_DILUTION-1 || sstable.currentIndexNumber == FirstOrLastElement {
-				indexPath := sstable.Instance.filename + "/index.bin"
-				indexFile, err := os.OpenFile(indexPath, os.O_APPEND|os.O_CREATE, 0777)
-				if err != nil {
-					log.Fatal(err)
-				}
-
-				finalKey := record.Key
-
-				keyLength := uint64(len(finalKey))
-				keyLengthBytes := make([]byte, 8)
-				binary.LittleEndian.PutUint64(keyLengthBytes, keyLength)
-
-				offsetBytes := make([]byte, 8)
-				binary.LittleEndian.PutUint64(offsetBytes, sstable.currentDataOffset)
-
-				indexBytes := make([]byte, 0)
-				indexBytes = append(indexBytes, keyLengthBytes...)
-				indexBytes = append(indexBytes, []byte(finalKey)...)
-				indexBytes = append(indexBytes, offsetBytes...)
-
-				indexFile.Write(indexBytes)
-				indexFile.Close()
-
-				sstable.currentIndexOffset += uint64(len(indexBytes))
-				sstable.currentIndexNumber = 0
-			}
-		}
-
 		// Data
 		{
 			dataPath := sstable.Instance.filename + "/data.bin"
@@ -1135,9 +1197,6 @@ func (sstable *SSTableCreator) WriteRecord(record rec.Record) {
 			recordBytes := RecordToSSTableRecord(record)
 			dataFile.Write(recordBytes)
 			dataFile.Close()
-			sstable.currentDataOffset += uint64(len(recordBytes))
-			sstable.currentIndexNumber += 1
-			sstable.currentSummaryNumber += 1
 		}
 	}
 }
