@@ -36,7 +36,6 @@ type SSTableCreator struct {
 	currentSummaryNumber uint32
 	currentDataOffset    uint64
 	currentIndexOffset   uint64
-	currentSummaryOffset uint64
 }
 
 // Notes
@@ -44,8 +43,10 @@ type SSTableCreator struct {
 
 const tombstoneTrue byte = 255
 const tombstoneFalse byte = 0
-const sstableFolderPath string = "./resources/sstables"
-const newSSTablePath string = "./resources/sstables/0001sstable0001"
+const SSTableFolderPath string = "./resources/sstables" // +
+const newSSTableSuffix string = "sstable0001"
+
+// const newSSTablePath string = "./resources/sstables/0001sstable0001"
 const FirstOrLastElement uint32 = 9999999
 const singleFileMetaLength uint16 = 57
 
@@ -63,6 +64,19 @@ const metaBloomfilterBegin int64 = 57
 
 func CRC32(data []byte) uint32 {
 	return crc32.ChecksumIEEE(data)
+}
+
+func MakeNewSSTableCreator(sstable SSTableInstance) SSTableCreator {
+	if sstable.isSingleFile {
+		file, err := os.OpenFile(sstable.filename, os.O_CREATE, 0777)
+		if err != nil {
+			log.Fatal(err)
+		}
+		dataOffset, _ := file.Seek(0, 2)
+		sstable.dataBeginOffset = dataOffset
+		file.Close()
+	}
+	return SSTableCreator{Instance: sstable, currentIndexNumber: 0, currentSummaryNumber: 0, currentDataOffset: 0, currentIndexOffset: 0}
 }
 
 func makeMerkleTreeFromData(sstable SSTableInstance) merk.MerkleTree {
@@ -178,7 +192,7 @@ func (sstable *SSTableInstance) checkBloomfilter(key string) bool {
 // Funkcija vraca Record i true ako je record sa unetim kljucem pronadjen. U suprotnom, vraca prazan Record i false
 func SSTableGet(key string) (rec.Record, bool) {
 	// 1) Procitaj folder sa svim SSTabelama da bi dobili pathove
-	sstablePaths, err := os.ReadDir(sstableFolderPath)
+	sstablePaths, err := os.ReadDir(SSTableFolderPath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -301,25 +315,32 @@ func (sstable *SSTableInstance) checkIfInRange(key string) bool {
 }
 
 // Pomocna funkcija povecava sve indekse SSTabeli na nekom LSM nivou za 1
-func updateSSTableNames(lsmLevel int) {
+func UpdateSSTableNames(lsmLevel int) {
 	pathsToChange := make([]string, 0)
 	pathIsDir := make([]bool, 0)
 	// Ucitaj imena svih sstabela
-	sstablePaths, err := os.ReadDir(sstableFolderPath)
+	sstablePaths, err := os.ReadDir(SSTableFolderPath)
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	lsmLevelReached := false
+
 	for _, path := range sstablePaths {
 		// podeli "XXXXsstableYYYY[.bin]"
 		splitPath := strings.Split(path.Name(), "sstable")
-		if splitPath[0] != "0001" {
-			// ako nije LSM nivo 1, ne preimenuj vise nista
+
+		if splitPath[0] != fmt.Sprintf("%04d", lsmLevel) && lsmLevelReached {
+			// ako nije vise u LSM nivou NAKON sto se proslo kroz njega, ne preimenuj vise nista
 			break
 		}
-		// dodaj ga u listu za promenu naziva ako jeste
-		pathsToChange = append(pathsToChange, path.Name())
-		pathIsDir = append(pathIsDir, path.IsDir())
+
+		// dodaj ga u listu za promenu naziva ako je u LSM nivou
+		if splitPath[0] == fmt.Sprintf("%04d", lsmLevel) {
+			lsmLevelReached = true
+			pathsToChange = append(pathsToChange, path.Name())
+			pathIsDir = append(pathIsDir, path.IsDir())
+		}
 	}
 
 	// iteriraj u obrnutom redosledu (da ne bi doslo do errora)
@@ -333,14 +354,14 @@ func updateSSTableNames(lsmLevel int) {
 		newIndexNumber := oldIndexNumber + 1
 		newIndex := fmt.Sprintf("%04d", newIndexNumber)
 		// napravi novi ceo path sa novim indeksom
-		newPath := sstableFolderPath + "/0001sstable" + newIndex
+		newPath := SSTableFolderPath + "/" + fmt.Sprintf("%04d", lsmLevel) + "sstable" + newIndex
 		if !pathIsDir[i] {
 			// dodaj jos ".bin" ako je bio u pitanju singleFile
 			newPath += ".bin"
 		}
 
 		// preimenuj ga
-		err := os.Rename(sstableFolderPath+"/"+pathsToChange[i], newPath)
+		err := os.Rename(SSTableFolderPath+"/"+pathsToChange[i], newPath)
 		if err != nil {
 			log.Println(err)
 		}
@@ -348,7 +369,7 @@ func updateSSTableNames(lsmLevel int) {
 }
 
 // Pomocna funkcija pravi novu SSTabelu koja je takodje i najnovija, 0001sstable0001
-func makeNewSSTableInstance() *SSTableInstance {
+func MakeNewSSTableInstance(lsmLevel int) *SSTableInstance {
 	var compression bool
 	config.Init()
 	if config.GlobalConfig.Compression == "yes" {
@@ -357,25 +378,13 @@ func makeNewSSTableInstance() *SSTableInstance {
 		compression = false
 	}
 
+	newSSTablePath := SSTableFolderPath + "/" + fmt.Sprintf("%04d", lsmLevel) + newSSTableSuffix
+
 	if config.GlobalConfig.SSTFiles == "one" {
 		sstablePath := newSSTablePath + ".bin"
-		return &SSTableInstance{filename: sstablePath, currentOffset: 0, isSingleFile: true, isCompressed: compression,
-			bloomfilterBeginOffset: metaBloomfilterBegin}
-	} else { // SSTFiles == "many"
-		return &SSTableInstance{filename: newSSTablePath, currentOffset: 0, dataBeginOffset: 0, isSingleFile: false, isCompressed: compression,
-			bloomfilterBeginOffset: 0, indexBeginOffset: 0, summaryBeginOffset: 0, merkleBeginOffset: 0}
-	}
-}
-
-// Funkcija pravi novu SSTabelu koja sadrzi prosledjen niz Recorda
-func CreateNewSSTable(records []rec.Record) {
-	newSSTableInstance := makeNewSSTableInstance()
-	updateSSTableNames(1)
-	newCreator := SSTableCreator{Instance: *newSSTableInstance, currentIndexNumber: 0, currentSummaryNumber: 0}
-	if config.GlobalConfig.SSTFiles == "one" {
 
 		metaBytes := make([]byte, 57)
-		file, err := os.OpenFile(newCreator.Instance.filename, os.O_CREATE, 0777)
+		file, err := os.OpenFile(sstablePath, os.O_CREATE, 0777)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -385,18 +394,31 @@ func CreateNewSSTable(records []rec.Record) {
 		}
 		placeholderBloom := bf.NewBloomFilter(config.GlobalConfig.BFExpectedElements, config.GlobalConfig.BFFalsePositiveRate)
 		file.Write(placeholderBloom.Serialize())
-		dataOffset, _ := file.Seek(0, 2)
-		newCreator.Instance.dataBeginOffset = dataOffset
 		file.Close()
 
+		return &SSTableInstance{filename: sstablePath, currentOffset: 0, isSingleFile: true, isCompressed: compression,
+			bloomfilterBeginOffset: metaBloomfilterBegin}
+	} else { // SSTFiles == "many"
+		os.Mkdir(newSSTablePath, 0777)
+		return &SSTableInstance{filename: newSSTablePath, currentOffset: 0, dataBeginOffset: 0, isSingleFile: false, isCompressed: compression,
+			bloomfilterBeginOffset: 0, indexBeginOffset: 0, summaryBeginOffset: 0, merkleBeginOffset: 0}
+	}
+}
+
+// Funkcija pravi novu SSTabelu koja sadrzi prosledjen niz Recorda, ISKLJUCIVO KORISTITI PRI FLUSHOVANJU IZ MEMTABELA
+func CreateNewSSTable(records []rec.Record) {
+	UpdateSSTableNames(1)
+	newSSTableInstance := MakeNewSSTableInstance(1)
+	newCreator := MakeNewSSTableCreator(*newSSTableInstance)
+
+	if config.GlobalConfig.SSTFiles == "one" {
 		for _, record := range records {
 			newCreator.WriteRecord(record)
 		}
-		newCreator.createIndex()
-		newCreator.createSummary()
-		newCreator.createMerkle(records)
+		newCreator.CreateIndex()
+		newCreator.CreateSummary()
+		newCreator.CreateMerkle(records)
 	} else {
-		os.Mkdir(newCreator.Instance.filename, 0777)
 		for index, record := range records {
 			if index == 0 || index == len(records)-1 {
 				newCreator.currentIndexNumber = FirstOrLastElement
@@ -416,7 +438,7 @@ func CreateNewSSTable(records []rec.Record) {
 		merkleFile.Close()
 
 	}
-	newCreator.createMetadata()
+	newCreator.CreateMetadata()
 }
 
 // Funkcija otvara SSTabelu sa prosledjenim file pathom. Vraca otvorenu instancu SSTabele
@@ -430,7 +452,7 @@ func OpenSSTable(filename string) SSTableInstance {
 	var summaryLastElemOffset int64 = 0
 	var merkleOffset int64 = 0
 	var bloomOffset int64 = 0
-	actualPath := sstableFolderPath + "/" + filename
+	actualPath := SSTableFolderPath + "/" + filename
 	_, err := os.Stat(actualPath)
 	if err == os.ErrNotExist {
 		actualPath += ".bin"
@@ -722,166 +744,176 @@ func (sstable *SSTableInstance) readIndexRecord() (string, bool) {
 	return key, true
 }
 
-func (sstable *SSTableCreator) createSummary() {
+func (sstable *SSTableCreator) CreateSummary() {
 	config.Init()
 
-	file, err := os.OpenFile(sstable.Instance.filename, os.O_RDWR, 0777)
-	if err != nil {
-		log.Fatal(err)
-	}
-	sstable.Instance.summaryBeginOffset, _ = file.Seek(0, 2)
-	file.Close()
-
-	var previousKey string
-	sstable.Instance.currentOffset = 0
-	sstable.currentIndexOffset = 0
-	sstable.currentSummaryNumber = 0
-	isFirstOrLast := true
-	for {
-		offsetAtBeginning := sstable.Instance.currentOffset
-		indexKey, isRead := sstable.Instance.readIndexRecord()
-		offsetAtEnd := sstable.Instance.currentOffset
-
-		if !isRead {
-			finalKey := previousKey
-
-			keyLength := uint64(len(finalKey))
-			keyLengthBytes := make([]byte, 8)
-			binary.LittleEndian.PutUint64(keyLengthBytes, keyLength)
-
-			offsetBytes := make([]byte, 8)
-			binary.LittleEndian.PutUint64(offsetBytes, sstable.currentIndexOffset)
-
-			summaryBytes := make([]byte, 0)
-			summaryBytes = append(summaryBytes, keyLengthBytes...)
-			summaryBytes = append(summaryBytes, []byte(finalKey)...)
-			summaryBytes = append(summaryBytes, offsetBytes...)
-
-			file, err := os.OpenFile(sstable.Instance.filename, os.O_RDWR, 0777)
-			if err != nil {
-				log.Fatal(err)
-			}
-			file.Seek(0, 2)
-			file.Write(summaryBytes)
-			file.Close()
-			break
+	if sstable.Instance.isSingleFile {
+		file, err := os.OpenFile(sstable.Instance.filename, os.O_RDWR, 0777)
+		if err != nil {
+			log.Fatal(err)
 		}
+		sstable.Instance.summaryBeginOffset, _ = file.Seek(0, 2)
+		file.Close()
 
-		if isFirstOrLast || sstable.currentSummaryNumber == config.DEGREE_OF_DILUTION-1 {
-			finalKeyBytes := []byte(indexKey)
-			keyLength := uint64(len(indexKey))
+		var previousKey string
+		sstable.Instance.currentOffset = 0
+		sstable.currentIndexOffset = 0
+		sstable.currentSummaryNumber = 0
+		isFirstOrLast := true
+		for {
+			offsetAtBeginning := sstable.Instance.currentOffset
+			indexKey, isRead := sstable.Instance.readIndexRecord()
+			offsetAtEnd := sstable.Instance.currentOffset
 
-			keyLengthBytes := make([]byte, 8)
-			binary.LittleEndian.PutUint64(keyLengthBytes, keyLength)
+			if !isRead {
+				finalKey := previousKey
 
-			offsetBytes := make([]byte, 8)
-			binary.LittleEndian.PutUint64(offsetBytes, sstable.currentIndexOffset)
+				keyLength := uint64(len(finalKey))
+				keyLengthBytes := make([]byte, 8)
+				binary.LittleEndian.PutUint64(keyLengthBytes, keyLength)
 
-			summaryBytes := make([]byte, 0)
-			summaryBytes = append(summaryBytes, keyLengthBytes...)
-			summaryBytes = append(summaryBytes, finalKeyBytes...)
-			summaryBytes = append(summaryBytes, offsetBytes...)
+				offsetBytes := make([]byte, 8)
+				binary.LittleEndian.PutUint64(offsetBytes, sstable.currentIndexOffset)
 
-			file, err := os.OpenFile(sstable.Instance.filename, os.O_RDWR, 0777)
-			if err != nil {
-				log.Fatal(err)
+				summaryBytes := make([]byte, 0)
+				summaryBytes = append(summaryBytes, keyLengthBytes...)
+				summaryBytes = append(summaryBytes, []byte(finalKey)...)
+				summaryBytes = append(summaryBytes, offsetBytes...)
+
+				file, err := os.OpenFile(sstable.Instance.filename, os.O_RDWR, 0777)
+				if err != nil {
+					log.Fatal(err)
+				}
+				file.Seek(0, 2)
+				file.Write(summaryBytes)
+				file.Close()
+				break
 			}
-			file.Seek(0, 2)
-			file.Write(summaryBytes)
-			file.Close()
-			sstable.currentSummaryNumber = 0
-		} else {
-			sstable.currentSummaryNumber += 1
-		}
 
-		sstable.currentIndexOffset += uint64(offsetAtEnd) - uint64(offsetAtBeginning)
-		previousKey = indexKey
+			if isFirstOrLast || sstable.currentSummaryNumber == config.DEGREE_OF_DILUTION-1 {
+				finalKeyBytes := []byte(indexKey)
+				keyLength := uint64(len(indexKey))
+
+				keyLengthBytes := make([]byte, 8)
+				binary.LittleEndian.PutUint64(keyLengthBytes, keyLength)
+
+				offsetBytes := make([]byte, 8)
+				binary.LittleEndian.PutUint64(offsetBytes, sstable.currentIndexOffset)
+
+				summaryBytes := make([]byte, 0)
+				summaryBytes = append(summaryBytes, keyLengthBytes...)
+				summaryBytes = append(summaryBytes, finalKeyBytes...)
+				summaryBytes = append(summaryBytes, offsetBytes...)
+
+				file, err := os.OpenFile(sstable.Instance.filename, os.O_RDWR, 0777)
+				if err != nil {
+					log.Fatal(err)
+				}
+				file.Seek(0, 2)
+				file.Write(summaryBytes)
+				file.Close()
+				sstable.currentSummaryNumber = 0
+			} else {
+				sstable.currentSummaryNumber += 1
+			}
+
+			sstable.currentIndexOffset += uint64(offsetAtEnd) - uint64(offsetAtBeginning)
+			previousKey = indexKey
+		}
+	} else {
+		// TO-DO: add support for multifile sstable
 	}
+
 }
 
-func (sstable *SSTableCreator) createIndex() {
+func (sstable *SSTableCreator) CreateIndex() {
 	config.Init()
 
-	file, err := os.OpenFile(sstable.Instance.filename, os.O_RDWR, 0777)
-	if err != nil {
-		log.Fatal(err)
-	}
-	sstable.Instance.indexBeginOffset, _ = file.Seek(0, 2)
-	file.Close()
-
-	sstable.Instance.currentOffset = 0
-	sstable.currentDataOffset = 0
-	sstable.currentIndexNumber = 0
-	recordsToRead := true
-	isFirstOrLast := true
-
-	var previousRecord rec.Record
-	for recordsToRead {
-
-		offsetAtBeginning := sstable.Instance.currentOffset
-		record, isRead := sstable.Instance.ReadRecord()
-		offsetAtEnd := sstable.Instance.currentOffset
-
-		if !isRead {
-			finalKey := previousRecord.Key
-
-			keyLength := uint64(len(finalKey))
-			keyLengthBytes := make([]byte, 8)
-			binary.LittleEndian.PutUint64(keyLengthBytes, keyLength)
-
-			offsetBytes := make([]byte, 8)
-			binary.LittleEndian.PutUint64(offsetBytes, sstable.currentDataOffset)
-
-			indexBytes := make([]byte, 0)
-			indexBytes = append(indexBytes, keyLengthBytes...)
-			indexBytes = append(indexBytes, []byte(finalKey)...)
-			indexBytes = append(indexBytes, offsetBytes...)
-
-			file, err := os.OpenFile(sstable.Instance.filename, os.O_RDWR, 0777)
-			if err != nil {
-				log.Fatal(err)
-			}
-			file.Seek(0, 2)
-			file.Write(indexBytes)
-			file.Close()
-			break
+	if sstable.Instance.isSingleFile {
+		file, err := os.OpenFile(sstable.Instance.filename, os.O_RDWR, 0777)
+		if err != nil {
+			log.Fatal(err)
 		}
+		sstable.Instance.indexBeginOffset, _ = file.Seek(0, 2)
+		file.Close()
 
-		if isFirstOrLast || sstable.currentIndexNumber == config.DEGREE_OF_DILUTION-1 {
-			isFirstOrLast = false
-			finalKey := record.Key
+		sstable.Instance.currentOffset = 0
+		sstable.currentDataOffset = 0
+		sstable.currentIndexNumber = 0
+		recordsToRead := true
+		isFirstOrLast := true
 
-			keyLength := uint64(len(finalKey))
-			keyLengthBytes := make([]byte, 8)
-			binary.LittleEndian.PutUint64(keyLengthBytes, keyLength)
+		var previousRecord rec.Record
+		for recordsToRead {
 
-			offsetBytes := make([]byte, 8)
-			binary.LittleEndian.PutUint64(offsetBytes, sstable.currentDataOffset)
+			offsetAtBeginning := sstable.Instance.currentOffset
+			record, isRead := sstable.Instance.ReadRecord()
+			offsetAtEnd := sstable.Instance.currentOffset
 
-			indexBytes := make([]byte, 0)
-			indexBytes = append(indexBytes, keyLengthBytes...)
-			indexBytes = append(indexBytes, []byte(finalKey)...)
-			indexBytes = append(indexBytes, offsetBytes...)
+			if !isRead {
+				finalKey := previousRecord.Key
 
-			file, err := os.OpenFile(sstable.Instance.filename, os.O_RDWR, 0777)
-			if err != nil {
-				log.Fatal(err)
+				keyLength := uint64(len(finalKey))
+				keyLengthBytes := make([]byte, 8)
+				binary.LittleEndian.PutUint64(keyLengthBytes, keyLength)
+
+				offsetBytes := make([]byte, 8)
+				binary.LittleEndian.PutUint64(offsetBytes, sstable.currentDataOffset)
+
+				indexBytes := make([]byte, 0)
+				indexBytes = append(indexBytes, keyLengthBytes...)
+				indexBytes = append(indexBytes, []byte(finalKey)...)
+				indexBytes = append(indexBytes, offsetBytes...)
+
+				file, err := os.OpenFile(sstable.Instance.filename, os.O_RDWR, 0777)
+				if err != nil {
+					log.Fatal(err)
+				}
+				file.Seek(0, 2)
+				file.Write(indexBytes)
+				file.Close()
+				break
 			}
-			file.Seek(0, 2)
-			file.Write(indexBytes)
-			file.Close()
 
-			sstable.currentIndexNumber = 0
-		} else {
-			sstable.currentIndexNumber += 1
+			if isFirstOrLast || sstable.currentIndexNumber == config.DEGREE_OF_DILUTION-1 {
+				isFirstOrLast = false
+				finalKey := record.Key
+
+				keyLength := uint64(len(finalKey))
+				keyLengthBytes := make([]byte, 8)
+				binary.LittleEndian.PutUint64(keyLengthBytes, keyLength)
+
+				offsetBytes := make([]byte, 8)
+				binary.LittleEndian.PutUint64(offsetBytes, sstable.currentDataOffset)
+
+				indexBytes := make([]byte, 0)
+				indexBytes = append(indexBytes, keyLengthBytes...)
+				indexBytes = append(indexBytes, []byte(finalKey)...)
+				indexBytes = append(indexBytes, offsetBytes...)
+
+				file, err := os.OpenFile(sstable.Instance.filename, os.O_RDWR, 0777)
+				if err != nil {
+					log.Fatal(err)
+				}
+				file.Seek(0, 2)
+				file.Write(indexBytes)
+				file.Close()
+
+				sstable.currentIndexNumber = 0
+			} else {
+				sstable.currentIndexNumber += 1
+			}
+
+			sstable.currentDataOffset += uint64(offsetAtEnd) - uint64(offsetAtBeginning)
+			previousRecord = record
 		}
-
-		sstable.currentDataOffset += uint64(offsetAtEnd) - uint64(offsetAtBeginning)
-		previousRecord = record
+	} else {
+		// TO-DO: add support for multifile sstable
 	}
+
 }
 
-func (sstable *SSTableCreator) createMerkle(records []rec.Record) {
+func (sstable *SSTableCreator) CreateMerkle(records []rec.Record) {
 	file, err := os.OpenFile(sstable.Instance.filename, os.O_RDWR, 0777)
 	if err != nil {
 		log.Fatal(err)
@@ -892,7 +924,7 @@ func (sstable *SSTableCreator) createMerkle(records []rec.Record) {
 	file.Close()
 }
 
-func (sstable *SSTableCreator) createMetadata() {
+func (sstable *SSTableCreator) CreateMetadata() {
 
 	if sstable.Instance.isSingleFile {
 		file, err := os.OpenFile(sstable.Instance.filename, os.O_RDWR, 0777)
@@ -1108,4 +1140,14 @@ func (sstable *SSTableCreator) WriteRecord(record rec.Record) {
 			sstable.currentSummaryNumber += 1
 		}
 	}
+}
+
+func (sstable *SSTableInstance) CheckIfContainsRange(start, finish string) bool {
+	// TO-DO
+	return false
+}
+
+func (sstable *SSTableInstance) CheckIfContainsPrefix(prefix string) bool {
+	// TO-DO
+	return false
 }
