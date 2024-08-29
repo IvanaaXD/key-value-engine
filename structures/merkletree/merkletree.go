@@ -81,6 +81,48 @@ func MakeMerkleTree(records []rec.Record) MerkleTree {
 	return MerkleTree{Root: *oldNodes[0]}
 }
 
+func MakeMerkleTreeFromHashedValues(values []uint64) MerkleTree {
+	numEmptyElems, _ := calculateNumEmptyNodes(len(values))
+	totalElements := numEmptyElems + len(values)
+
+	// Kreiranje listova stabla
+	leafNodes := make([]*merkleTreeNode, totalElements)
+	index := 0
+	for _, value := range values {
+		leafNodes[index] = &merkleTreeNode{hashValue: value, leftChild: nil, rightChild: nil}
+		index += 1
+	}
+
+	// Kreiranje praznih listova (ne mora se kreirati vise kada su svi isti)
+	emptyNodeAddress := &merkleTreeNode{hashValue: emptyNodeHash, leftChild: nil, rightChild: nil}
+	i := 0
+	for i < numEmptyElems {
+		leafNodes[index] = emptyNodeAddress
+		i += 1
+		index += 1
+	}
+
+	// Prelazak na sledeci nivo stabla
+	totalElements /= 2
+	oldNodes := leafNodes
+
+	// Pravljenje cvorova na jednom nivou, zatim prelazak na sledeci, sve dok nisu popunjeni
+	for totalElements >= 1 {
+		newNodesIndex := 0
+		newNodes := make([]*merkleTreeNode, totalElements)
+		for newNodesIndex < totalElements {
+			oldNodesIndex := newNodesIndex * 2
+			newNodes[newNodesIndex] = &merkleTreeNode{hashValue: oldNodes[oldNodesIndex].hashValue + oldNodes[oldNodesIndex+1].hashValue,
+				leftChild: oldNodes[oldNodesIndex], rightChild: oldNodes[oldNodesIndex+1]}
+			newNodesIndex += 1
+		}
+		totalElements /= 2
+		oldNodes = newNodes
+	}
+
+	return MerkleTree{Root: *oldNodes[0]}
+}
+
 func leafNodeSerialization(currentNode merkleTreeNode, serializationUtil *serializationUtil) {
 	if currentNode.leftChild == nil {
 		nodeBytes := make([]byte, 8)

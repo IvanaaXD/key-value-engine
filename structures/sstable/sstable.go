@@ -1,6 +1,7 @@
 package sstable
 
 import (
+	"crypto/md5"
 	"encoding/binary"
 	"fmt"
 	"hash/crc32"
@@ -89,6 +90,44 @@ func makeMerkleTreeFromData(sstable SSTableInstance) merk.MerkleTree {
 		allRecords = append(allRecords, newRecord)
 	}
 	return merk.MakeMerkleTree(allRecords)
+}
+
+func (sstable *SSTableInstance) getFirstAndLastKeyInSSTable() (string, string) {
+	var file *os.File
+	var err error
+
+	if sstable.isSingleFile {
+		file, err = os.OpenFile(sstable.filename, os.O_RDONLY, 0777)
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		file, err = os.OpenFile(sstable.filename+"/summary.bin", os.O_RDONLY, 0777)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	file.Seek(sstable.summaryBeginOffset, 0)
+	firstKeyLengthBytes := make([]byte, 8)
+	file.Read(firstKeyLengthBytes)
+	firstKeyLength := binary.LittleEndian.Uint64(firstKeyLengthBytes)
+
+	firstKeyBytes := make([]byte, firstKeyLength)
+	file.Read(firstKeyBytes)
+	firstKeyFromSummary := string(firstKeyBytes)
+
+	file.Seek(sstable.summaryLastElementOffset, 0)
+	secondKeyLengthBytes := make([]byte, 8)
+	file.Read(secondKeyLengthBytes)
+	secondKeyLength := binary.LittleEndian.Uint64(secondKeyLengthBytes)
+
+	secondKeyBytes := make([]byte, secondKeyLength)
+	file.Read(secondKeyBytes)
+	secondKeyFromSummary := string(secondKeyBytes)
+
+	file.Close()
+	return firstKeyFromSummary, secondKeyFromSummary
 }
 
 // Funkcija pretvara Record u zapis za SSTabelu BEZ KOMPRESIJE (public funkcija zbog LSM)
@@ -278,40 +317,8 @@ func SSTableGet(key string) (rec.Record, bool) {
 }
 
 func (sstable *SSTableInstance) checkIfInRange(key string) bool {
-	var file *os.File
-	var err error
-
-	if sstable.isSingleFile {
-		file, err = os.OpenFile(sstable.filename, os.O_RDONLY, 0777)
-		if err != nil {
-			log.Fatal(err)
-		}
-	} else {
-		file, err = os.OpenFile(sstable.filename+"/index.bin", os.O_RDONLY, 0777)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-
-	file.Seek(sstable.indexBeginOffset, 0)
-	firstKeyLengthBytes := make([]byte, 8)
-	file.Read(firstKeyLengthBytes)
-	firstKeyLength := binary.LittleEndian.Uint64(firstKeyLengthBytes)
-
-	firstKeyBytes := make([]byte, firstKeyLength)
-	file.Read(firstKeyBytes)
-	firstKeyFromIndex := string(firstKeyBytes)
-
-	file.Seek(sstable.indexLastElementOffset, 0)
-	secondKeyLengthBytes := make([]byte, 8)
-	file.Read(secondKeyLengthBytes)
-	secondKeyLength := binary.LittleEndian.Uint64(secondKeyLengthBytes)
-
-	secondKeyBytes := make([]byte, secondKeyLength)
-	file.Read(secondKeyBytes)
-	secondKeyFromIndex := string(secondKeyBytes)
-
-	return key >= firstKeyFromIndex && key <= secondKeyFromIndex
+	firstKey, lastKey := sstable.getFirstAndLastKeyInSSTable()
+	return firstKey <= key && key <= lastKey
 }
 
 // Pomocna funkcija povecava sve indekse SSTabeli na nekom LSM nivou za 1
@@ -411,32 +418,12 @@ func CreateNewSSTable(records []rec.Record) {
 	newSSTableInstance := MakeNewSSTableInstance(1)
 	newCreator := MakeNewSSTableCreator(*newSSTableInstance)
 
-	if config.GlobalConfig.SSTFiles == "one" {
-		for _, record := range records {
-			newCreator.WriteRecord(record)
-		}
-		newCreator.CreateIndex()
-		newCreator.CreateSummary()
-		newCreator.CreateMerkle(records)
-	} else {
-		for _, record := range records {
-			newCreator.WriteRecord(record)
-		}
-
-		newCreator.CreateIndex()
-		newCreator.CreateSummary()
-
-		merkleTree := merk.MakeMerkleTree(records)
-		merkleBytes := merkleTree.Serialize()
-
-		merkleFile, err := os.OpenFile(newCreator.Instance.filename+"/merkle.bin", os.O_WRONLY|os.O_CREATE, 0777)
-		if err != nil {
-			log.Fatal(err)
-		}
-		merkleFile.Write(merkleBytes)
-		merkleFile.Close()
-
+	for _, record := range records {
+		newCreator.WriteRecord(record)
 	}
+	newCreator.CreateIndex()
+	newCreator.CreateSummary()
+	newCreator.CreateMerkle()
 	newCreator.CreateMetadata()
 }
 
@@ -1039,15 +1026,42 @@ func (sstable *SSTableCreator) CreateIndex() {
 
 }
 
-func (sstable *SSTableCreator) CreateMerkle(records []rec.Record) {
-	file, err := os.OpenFile(sstable.Instance.filename, os.O_RDWR, 0777)
-	if err != nil {
-		log.Fatal(err)
+func (sstable *SSTableCreator) CreateMerkle() {
+	hashValues := make([]uint64, 0)
+	fn := md5.New()
+	sstable.Instance.currentOffset = 0
+
+	for {
+		record, valid := sstable.Instance.ReadRecord()
+		if !valid {
+			break
+		}
+		fn.Write(rec.RecToBytes(record))
+		hashValues = append(hashValues, binary.BigEndian.Uint64(fn.Sum(nil)))
+		fn.Reset()
 	}
-	file.Seek(0, 2)
-	merkleTree := merk.MakeMerkleTree(records)
-	file.Write(merkleTree.Serialize())
-	file.Close()
+
+	merkleTree := merk.MakeMerkleTreeFromHashedValues(hashValues)
+	merkleBytes := merkleTree.Serialize()
+
+	var merkleFile *os.File
+	var err error
+	if sstable.Instance.isSingleFile {
+		merkleFile, err = os.OpenFile(sstable.Instance.filename, os.O_RDWR, 0777)
+		if err != nil {
+			log.Fatal(err)
+		}
+		offset, _ := merkleFile.Seek(0, 2)
+		sstable.Instance.merkleBeginOffset = offset
+	} else {
+		merkleFile, err = os.OpenFile(sstable.Instance.filename+"/merkle.bin", os.O_RDWR|os.O_CREATE, 0777)
+		if err != nil {
+			log.Fatal(err)
+		}
+		sstable.Instance.merkleBeginOffset = 0
+	}
+	merkleFile.Write(merkleBytes)
+	merkleFile.Close()
 }
 
 func (sstable *SSTableCreator) CreateMetadata() {
@@ -1201,12 +1215,81 @@ func (sstable *SSTableCreator) WriteRecord(record rec.Record) {
 	}
 }
 
+// Funkcija proverava da li sstabela sadrzi prosledjeni opseg. Ako sadrzi,
+// pozicionira se na element koji prvi zadovoljava opseg
 func (sstable *SSTableInstance) CheckIfContainsRange(start, finish string) bool {
-	// TO-DO
-	return false
+	firstKey, lastKey := sstable.getFirstAndLastKeyInSSTable()
+	isContained := firstKey <= finish || lastKey >= start
+
+	if isContained {
+		//	7) Pozicionirati se na najblizi element u summary
+		var previousIndexOffset uint64
+		var lastStatus byte
+		sstable.currentOffset = 0
+		for {
+			offset, keyStatus := sstable.readSummaryRecordForKey(start)
+			lastStatus = keyStatus
+			if keyStatus == 0 {
+				previousIndexOffset = offset
+			} else if keyStatus == 1 {
+				previousIndexOffset = offset
+				break
+			} else {
+				lastStatus = keyStatus
+				break
+			}
+		}
+
+		if lastStatus == 3 { // Ako je ipak dosao do kraja zbog nekog razloga
+			return false
+		}
+		//	8) Otvoriti/Preskociti na index deo na datom offsetu
+		var previousDataOffset uint64
+		sstable.currentOffset = int64(previousIndexOffset)
+		//	9) Pozicionirati se na najblizi element u index
+		for {
+			offset, keyStatus := sstable.readIndexRecordForKey(start)
+			lastStatus = keyStatus
+			if keyStatus == 0 {
+				previousDataOffset = offset
+			} else if keyStatus == 1 {
+				previousDataOffset = offset
+				break
+			} else {
+				lastStatus = keyStatus
+				break
+			}
+		}
+
+		if lastStatus == 3 {
+			return false
+		}
+		//	10) Otvoriti/Preskociti na data deo na datom index-u
+		var previousOffset int64
+		sstable.currentOffset = int64(previousDataOffset)
+		for {
+			previousOffset = sstable.currentOffset
+			record, status := sstable.ReadRecord()
+
+			if !status {
+				return false
+			}
+
+			if record.Key >= start {
+				break
+			}
+		}
+		sstable.currentOffset = previousOffset
+	}
+
+	return isContained
 }
 
+// Funkcija proverava da li sstabela sadrzi prosledjen prefiks. Ako sadrzi,
+// pozicionira se na prvi element koji ima prosledjen prefiks
 func (sstable *SSTableInstance) CheckIfContainsPrefix(prefix string) bool {
-	// TO-DO
-	return false
+	isPossiblyContained := sstable.checkIfInRange(prefix)
+
+	// TO-DO: position currentOffset to right before the first relevant element
+	return isPossiblyContained
 }
