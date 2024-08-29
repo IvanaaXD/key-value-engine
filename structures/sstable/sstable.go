@@ -80,7 +80,7 @@ func MakeNewSSTableCreator(sstable SSTableInstance) SSTableCreator {
 	return SSTableCreator{Instance: sstable, currentIndexNumber: 0, currentSummaryNumber: 0, currentDataOffset: 0, currentIndexOffset: 0}
 }
 
-func (sstable *SSTableInstance) getFirstAndLastKeyInSSTable() (string, string) {
+func (sstable *SSTableInstance) GetFirstAndLastKeyInSSTable() (string, string) {
 	var file *os.File
 	var err error
 
@@ -305,7 +305,7 @@ func SSTableGet(key string) (rec.Record, bool) {
 }
 
 func (sstable *SSTableInstance) checkIfInRange(key string) bool {
-	firstKey, lastKey := sstable.getFirstAndLastKeyInSSTable()
+	firstKey, lastKey := sstable.GetFirstAndLastKeyInSSTable()
 	return firstKey <= key && key <= lastKey
 }
 
@@ -1206,7 +1206,7 @@ func (sstable *SSTableCreator) WriteRecord(record rec.Record) {
 // Funkcija proverava da li sstabela sadrzi prosledjeni opseg. Ako sadrzi,
 // pozicionira se na element koji prvi zadovoljava opseg
 func (sstable *SSTableInstance) CheckIfContainsRange(start, finish string) bool {
-	firstKey, lastKey := sstable.getFirstAndLastKeyInSSTable()
+	firstKey, lastKey := sstable.GetFirstAndLastKeyInSSTable()
 	isContained := firstKey <= finish || lastKey >= start
 
 	if isContained {
