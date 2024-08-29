@@ -80,18 +80,6 @@ func MakeNewSSTableCreator(sstable SSTableInstance) SSTableCreator {
 	return SSTableCreator{Instance: sstable, currentIndexNumber: 0, currentSummaryNumber: 0, currentDataOffset: 0, currentIndexOffset: 0}
 }
 
-func makeMerkleTreeFromData(sstable SSTableInstance) merk.MerkleTree {
-	allRecords := make([]rec.Record, 0)
-	for {
-		newRecord, recordExists := sstable.ReadRecord()
-		if !recordExists {
-			break
-		}
-		allRecords = append(allRecords, newRecord)
-	}
-	return merk.MakeMerkleTree(allRecords)
-}
-
 func (sstable *SSTableInstance) getFirstAndLastKeyInSSTable() (string, string) {
 	var file *os.File
 	var err error
