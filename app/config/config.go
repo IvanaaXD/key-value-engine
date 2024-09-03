@@ -62,49 +62,49 @@ const (
 )
 
 type Config struct {
-	BFExpectedElements  int      `yaml:"BFExpectedElements"`
-	BFFalsePositiveRate float64  `yaml:"bloomFalsePositive"`
-	CmsEpsilon          float64  `yaml:"cmsEpsilon"`
-	CmsDelta            float64  `yaml:"cmsDelta"`
-	CacheCapacity       int      `yaml:"cacheCapacity"`
-	MemtableSize        uint     `yaml:"memtableSize"`
-	MemtableNum         uint     `yaml:"memtableNum"`
-	StructureType       string   `yaml:"structureType"`
-	TokenNumber         uint16   `yaml:"tokenNumber"`
-	TokenRefreshTime    uint16   `yaml:"tokenRefreshTime"`
-	WalPath             string   `yaml:"walPath"`
-	MaxEntrySize        int      `yaml:"maxEntrySize"`
-	CrcSize             int      `yaml:"crcSize"`
-	TimestampSize       int      `yaml:"timestampSize"`
-	TombstoneSize       int      `yaml:"tombstoneSize"`
-	KeySizeSize         int      `yaml:"keySizeSize"`
-	ValueSizeSize       int      `yaml:"valueSizeSize"`
-	CrcStart            int      `yaml:"crcStart"`
-	BTreeOrder          int      `yaml:"bTreeOrder"`
-	ScalingFactor       int      `yaml:"scalingFactor"`
-	CompactionAlgorithm string   `yaml:"compactionAlgorithm"`
-	Condition           string   `yaml:"condition"`
-	SegmentSize         int      `yaml:"segmentSize"`
-	DegreeOfDilution    int      `yaml:"degreeOfDilution"`
-	SSTFiles            string   `yaml:"sstFiles"`
-	SSTableSize         uint64   `yaml:"sstableSize"`
-	Prefix              string   `yaml:"prefix"`
-	TimestampStart      int      `yaml:"timestampStart"`
-	TombstoneStart      int      `yaml:"tombstoneStart"`
-	KeySizeStart        int      `yaml:"keySizeStart"`
-	ValueSizeStart      int      `yaml:"ValueSizeStart"`
-	KeyStart            int      `yaml:"keyStart"`
-	CompressionDict     string   `yaml:"dictionary"`
-	BFPrefix            string   `yaml:"bfPrefix"`
-	CMSPrefix           string   `yaml:"cmsPrefix"`
-	HLLPrefix           string   `yaml:"hllPrefix"`
-	SHPrefix            string   `yaml:"shPrefix"`
-	TBPrefix            string   `yaml:"tbPrefix"`
-	Compression         string   `yaml:"compression"`
-	MapFileName         string   `yaml:"mapFileName"`
-	LSMMaxLevels        int      `yaml:"lsmMaxLevels"`
-	LSMMaxTables        uint64   `yaml:"lsmMaxTables"`
-	LsmLeveledComp      []uint64 `yaml:"lsmLeveledComp"`
+	BFExpectedElements  int     `yaml:"BFExpectedElements"`
+	BFFalsePositiveRate float64 `yaml:"bloomFalsePositive"`
+	CmsEpsilon          float64 `yaml:"cmsEpsilon"`
+	CmsDelta            float64 `yaml:"cmsDelta"`
+	CacheCapacity       int     `yaml:"cacheCapacity"`
+	MemtableSize        uint    `yaml:"memtableSize"`
+	MemtableNum         uint    `yaml:"memtableNum"`
+	StructureType       string  `yaml:"structureType"`
+	TokenNumber         uint16  `yaml:"tokenNumber"`
+	TokenRefreshTime    uint16  `yaml:"tokenRefreshTime"`
+	WalPath             string  `yaml:"walPath"`
+	MaxEntrySize        int     `yaml:"maxEntrySize"`
+	CrcSize             int     `yaml:"crcSize"`
+	TimestampSize       int     `yaml:"timestampSize"`
+	TombstoneSize       int     `yaml:"tombstoneSize"`
+	KeySizeSize         int     `yaml:"keySizeSize"`
+	ValueSizeSize       int     `yaml:"valueSizeSize"`
+	CrcStart            int     `yaml:"crcStart"`
+	BTreeOrder          int     `yaml:"bTreeOrder"`
+	ScalingFactor       int     `yaml:"scalingFactor"`
+	CompactionAlgorithm string  `yaml:"compactionAlgorithm"`
+	Condition           string  `yaml:"condition"`
+	SegmentSize         int     `yaml:"segmentSize"`
+	DegreeOfDilution    int     `yaml:"degreeOfDilution"`
+	SSTFiles            string  `yaml:"sstFiles"`
+	SSTableSize         uint64  `yaml:"sstableSize"`
+	Prefix              string  `yaml:"prefix"`
+	TimestampStart      int     `yaml:"timestampStart"`
+	TombstoneStart      int     `yaml:"tombstoneStart"`
+	KeySizeStart        int     `yaml:"keySizeStart"`
+	ValueSizeStart      int     `yaml:"ValueSizeStart"`
+	KeyStart            int     `yaml:"keyStart"`
+	CompressionDict     string  `yaml:"dictionary"`
+	BFPrefix            string  `yaml:"bfPrefix"`
+	CMSPrefix           string  `yaml:"cmsPrefix"`
+	HLLPrefix           string  `yaml:"hllPrefix"`
+	SHPrefix            string  `yaml:"shPrefix"`
+	TBPrefix            string  `yaml:"tbPrefix"`
+	Compression         string  `yaml:"compression"`
+	MapFileName         string  `yaml:"mapFileName"`
+	LSMMaxLevels        int     `yaml:"lsmMaxLevels"`
+	LSMMaxTables        uint64  `yaml:"lsmMaxTables"`
+	LsmLeveledComp      uint64  `yaml:"lsmLeveledComp"`
 }
 
 func NewConfig(filename string) *Config {
@@ -150,7 +150,7 @@ func NewConfig(filename string) *Config {
 		config.MapFileName = MAP_FILE_PATH
 		config.LSMMaxTables = LSM_MAX_TABLES
 		config.LSMMaxLevels = LSM_MAX_LEVELS
-		config.LsmLeveledComp = []uint64{4, 10, 100, 500}
+		config.LsmLeveledComp = 4
 
 	} else {
 		err = yaml.Unmarshal(yamlFile, &config)

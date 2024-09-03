@@ -25,8 +25,4 @@ ValueSizeStart: 21 # korisnik
 keyStart: 29 # korisnik
 degreeOfDilution: 5 # korisnik
 sstFiles: one # korisnik
-lsmLeveledComp: # korisnik
-  - 4
-  - 10
-  - 100
-  - 500
+lsmLeveledComp: 4 # korisnik
