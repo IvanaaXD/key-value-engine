@@ -1205,6 +1205,7 @@ func (sstable *SSTableCreator) WriteRecord(record rec.Record) {
 
 // Funkcija proverava da li sstabela sadrzi prosledjeni opseg. Ako sadrzi,
 // pozicionira se na element koji prvi zadovoljava opseg
+// Vraca true ako sadrzi opseg ili deo opsega, vraca false ako ne
 func (sstable *SSTableInstance) CheckIfContainsRange(start, finish string) bool {
 	firstKey, lastKey := sstable.GetFirstAndLastKeyInSSTable()
 	isContained := firstKey <= finish || lastKey >= start
@@ -1275,9 +1276,73 @@ func (sstable *SSTableInstance) CheckIfContainsRange(start, finish string) bool 
 
 // Funkcija proverava da li sstabela sadrzi prosledjen prefiks. Ako sadrzi,
 // pozicionira se na prvi element koji ima prosledjen prefiks
+// Vraca true ako sadrzi recorde sa kljucem koji ima prosledjen prefiks, vraca false ako ne
 func (sstable *SSTableInstance) CheckIfContainsPrefix(prefix string) bool {
 	isPossiblyContained := sstable.checkIfInRange(prefix)
 
-	// TO-DO: position currentOffset to right before the first relevant element
+	if isPossiblyContained {
+		//	7) Pozicionirati se na najblizi element u summary
+		var previousIndexOffset uint64
+		var lastStatus byte
+		sstable.currentOffset = 0
+		for {
+			offset, keyStatus := sstable.readSummaryRecordForKey(prefix)
+			lastStatus = keyStatus
+			if keyStatus == 0 {
+				previousIndexOffset = offset
+			} else if keyStatus == 1 {
+				previousIndexOffset = offset
+				break
+			} else {
+				lastStatus = keyStatus
+				break
+			}
+		}
+
+		if lastStatus == 3 { // Ako je ipak dosao do kraja zbog nekog razloga
+			return false
+		}
+		//	8) Otvoriti/Preskociti na index deo na datom offsetu
+		var previousDataOffset uint64
+		sstable.currentOffset = int64(previousIndexOffset)
+		//	9) Pozicionirati se na najblizi element u index
+		for {
+			offset, keyStatus := sstable.readIndexRecordForKey(prefix)
+			lastStatus = keyStatus
+			if keyStatus == 0 {
+				previousDataOffset = offset
+			} else if keyStatus == 1 {
+				previousDataOffset = offset
+				break
+			} else {
+				lastStatus = keyStatus
+				break
+			}
+		}
+
+		if lastStatus == 3 {
+			return false
+		}
+		//	10) Otvoriti/Preskociti na data deo na datom index-u
+		var previousOffset int64
+		sstable.currentOffset = int64(previousDataOffset)
+		for {
+			previousOffset = sstable.currentOffset
+			record, status := sstable.ReadRecord()
+
+			if !status {
+				return false
+			}
+
+			if record.Key >= prefix {
+				if !strings.HasPrefix(record.Key, prefix) {
+					isPossiblyContained = false
+				}
+				break
+			}
+		}
+		sstable.currentOffset = previousOffset
+	}
+
 	return isPossiblyContained
 }
