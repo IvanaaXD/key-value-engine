@@ -106,6 +106,11 @@ func InitializeLSMCheck() {
 	initializeLSMCheckRecursive(1)
 }
 
+func getWantedPathsForLeveledAlgorithm(lsmLevel int, beginningKey, endKey string) []string {
+	// TO-DO
+	return nil
+}
+
 // TO-DO: leveled compaction requires different wantedPaths
 func initializeLSMCheckRecursive(lsmLevel int) {
 	config.Init()
@@ -120,7 +125,7 @@ func initializeLSMCheckRecursive(lsmLevel int) {
 		compactBySizeTier(lsmLevel, wantedPaths)
 		initializeLSMCheckRecursive(lsmLevel + 1)
 	} else if config.GlobalConfig.CompactionAlgorithm == "leveled" && isLeveledCompactionConditionFulfilled(lsmLevel) {
-		compactByLevel(wantedPaths)
+		compactByLevel(lsmLevel)
 		initializeLSMCheckRecursive(lsmLevel + 1)
 	}
 }
@@ -176,6 +181,55 @@ func compactBySizeTier(lsmLevel int, paths []string) {
 
 }
 
-func compactByLevel(paths []string) {
+func compactByLevel(lsmLevel int) {
+	sst.UpdateSSTableNames(lsmLevel + 1)
+	newInstance := sst.MakeNewSSTableInstance(lsmLevel + 1)
+	newCreator := sst.MakeNewSSTableCreator(*newInstance)
 
+	// TO-DO
+	paths := getWantedPathsForLeveledAlgorithm(lsmLevel+1, "", "")
+
+	sstableInstances := make([]sst.SSTableInstance, 0)
+	for _, path := range paths {
+		sstableInstances = append(sstableInstances, sst.OpenSSTable(path))
+	}
+
+	currentRecords := make([]rec.Record, len(sstableInstances))
+	isReadArray := make([]bool, len(sstableInstances))
+
+	for index, instance := range sstableInstances {
+		currentRecords[index], isReadArray[index] = instance.ReadRecord()
+	}
+
+	for !isEverythingFullyRead(isReadArray) {
+		// check if there are any records with the same key and replace the one with the smaller Timestamp value
+		isOverlapFound, overlappingRecords := findRepeatingRecords(currentRecords, isReadArray)
+		for isOverlapFound {
+			for _, toChangeIndex := range overlappingRecords {
+				replacementRecord, replacementIsRead := sstableInstances[toChangeIndex].ReadRecord()
+				currentRecords[toChangeIndex] = replacementRecord
+				isReadArray[toChangeIndex] = replacementIsRead
+
+				isOverlapFound, overlappingRecords = findRepeatingRecords(currentRecords, isReadArray)
+			}
+		}
+		// find the record with the lexically smallest key in currentRecords
+		smallestIndex := findLexicallySmallestRecord(currentRecords, isReadArray)
+		// write the record into the new sstable
+		newCreator.WriteRecord(currentRecords[smallestIndex])
+		// get the record from that sstable using sstableInstances and ReadRecord
+		newestRecord, newestIsRead := sstableInstances[smallestIndex].ReadRecord()
+		// update currentRecords and isReadArray
+		currentRecords[smallestIndex] = newestRecord
+		isReadArray[smallestIndex] = newestIsRead
+	}
+
+	newCreator.CreateIndex()
+	newCreator.CreateSummary()
+	newCreator.CreateMerkle()
+	newCreator.CreateMetadata()
+
+	for _, path := range paths {
+		os.Remove(sst.SSTableFolderPath + "/" + path)
+	}
 }
