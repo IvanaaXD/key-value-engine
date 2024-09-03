@@ -2,6 +2,7 @@ package lsm_tree
 
 import (
 	"log"
+	"math/rand"
 	"os"
 	"slices"
 	"strconv"
@@ -48,8 +49,14 @@ func extractSSTablePathsOfLSMLevel(lsmLevel int) []string {
 }
 
 func isLeveledCompactionConditionFulfilled(lsmLevel int) bool {
-	// TO-DO: proveriti sa Ivanom sta je sta u configu
-	return false
+	config.Init()
+
+	requiredSSTableCount := config.GlobalConfig.LSMMaxTables
+	for i := 1; i < lsmLevel; i++ {
+		requiredSSTableCount = requiredSSTableCount * config.GlobalConfig.LsmLeveledComp
+	}
+
+	return len(extractSSTablePathsOfLSMLevel(lsmLevel)) == int(requiredSSTableCount)
 }
 
 func findLexicallySmallestRecord(records []rec.Record, isRead []bool) int {
@@ -106,12 +113,31 @@ func InitializeLSMCheck() {
 	initializeLSMCheckRecursive(1)
 }
 
-func getWantedPathsForLeveledAlgorithm(lsmLevel int, beginningKey, endKey string) []string {
-	// TO-DO
-	return nil
+func getWantedPathsForLeveledAlgorithm(lsmLevel int) []string {
+	finalPaths := make([]string, 0)
+
+	randomChoiceLevel := lsmLevel - 1
+	randomChoicePaths := extractSSTablePathsOfLSMLevel(randomChoiceLevel)
+	randomChoicePath := randomChoicePaths[rand.Intn(len(randomChoicePaths))]
+	randomChoiceTable := sst.OpenSSTable(randomChoicePath)
+	finalPaths = append(finalPaths, randomChoicePath)
+
+	nextLevelTables := extractSSTablePathsOfLSMLevel(lsmLevel)
+	possibleMatches := nextLevelTables[1:]
+
+	firstKey, lastKey := randomChoiceTable.GetFirstAndLastKeyInSSTable()
+
+	for _, path := range possibleMatches {
+		sstable := sst.OpenSSTable(path)
+		otherFirst, otherLast := sstable.GetFirstAndLastKeyInSSTable()
+		if otherFirst >= firstKey && otherLast <= lastKey {
+			finalPaths = append(finalPaths, path)
+		}
+	}
+
+	return finalPaths
 }
 
-// TO-DO: leveled compaction requires different wantedPaths
 func initializeLSMCheckRecursive(lsmLevel int) {
 	config.Init()
 
@@ -186,8 +212,7 @@ func compactByLevel(lsmLevel int) {
 	newInstance := sst.MakeNewSSTableInstance(lsmLevel + 1)
 	newCreator := sst.MakeNewSSTableCreator(*newInstance)
 
-	// TO-DO
-	paths := getWantedPathsForLeveledAlgorithm(lsmLevel+1, "", "")
+	paths := getWantedPathsForLeveledAlgorithm(lsmLevel + 1)
 
 	sstableInstances := make([]sst.SSTableInstance, 0)
 	for _, path := range paths {
