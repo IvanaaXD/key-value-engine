@@ -33,14 +33,12 @@ func PrefixScan(key string) []record.Record {
 	memtableRecords := inicialize.Memtables.PrefixScan(key)
 	sstableRecords := sstable.PrefixScan(key, memtableRecords)
 
-	allRecords := append(memtableRecords, sstableRecords...)
-
-	sort.Slice(allRecords, func(i, j int) bool {
-		return allRecords[i].Key < allRecords[j].Key
+	sort.Slice(sstableRecords, func(i, j int) bool {
+		return sstableRecords[i].Key < sstableRecords[j].Key
 	})
 
-	result := make([]record.Record, len(allRecords))
-	for i, rec := range allRecords {
+	result := make([]record.Record, len(sstableRecords))
+	for i, rec := range sstableRecords {
 		result[i] = *rec
 	}
 
@@ -50,17 +48,14 @@ func PrefixScan(key string) []record.Record {
 func RangeScan(start, end string) []record.Record {
 	memtableRecords := inicialize.Memtables.RangeScan(start, end)
 
-	var sstableRecords []*record.Record
-	// sstableRecords = sstable.RangeScanAll(start, end, pageNumber, pageSize, memtableRecords, oldRecords)
+	sstableRecords := sstable.RangeScan(start, end, memtableRecords)
 
-	allRecords := append(memtableRecords, sstableRecords...)
-
-	sort.Slice(allRecords, func(i, j int) bool {
-		return allRecords[i].Key < allRecords[j].Key
+	sort.Slice(sstableRecords, func(i, j int) bool {
+		return sstableRecords[i].Key < sstableRecords[j].Key
 	})
 
-	result := make([]record.Record, len(allRecords))
-	for i, rec := range allRecords {
+	result := make([]record.Record, len(sstableRecords))
+	for i, rec := range sstableRecords {
 		result[i] = *rec
 	}
 

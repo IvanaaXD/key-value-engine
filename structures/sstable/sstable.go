@@ -1348,9 +1348,9 @@ func (sstable *SSTableInstance) CheckIfContainsPrefix(prefix string) bool {
 	return isPossiblyContained
 }
 
-func (sstable *SSTableInstance) PrefixScan(key string, memtableRecords []*rec.Record) []*rec.Record {
+func PrefixScan(key string, memtableRecords []*rec.Record) []*rec.Record {
 
-	var records []*rec.Record
+	var records = memtableRecords
 	latestTimestamps := make(map[string]int64)
 
 	sstablePaths, err := os.ReadDir(SSTableFolderPath)
@@ -1382,10 +1382,6 @@ func (sstable *SSTableInstance) PrefixScan(key string, memtableRecords []*rec.Re
 
 			if strings.HasPrefix(record.Key, key) {
 
-				if recordExists(memtableRecords, record.Key) {
-					continue
-				}
-
 				if storedTimestamp, exists := latestTimestamps[record.Key]; exists {
 					if record.Timestamp > storedTimestamp {
 						latestTimestamps[record.Key] = record.Timestamp
@@ -1407,9 +1403,9 @@ func (sstable *SSTableInstance) PrefixScan(key string, memtableRecords []*rec.Re
 	return records
 }
 
-func (sstable *SSTableInstance) RangeScan(start, end string, memtableRecords []*rec.Record) []*rec.Record {
+func RangeScan(start, end string, memtableRecords []*rec.Record) []*rec.Record {
 
-	var records []*rec.Record
+	var records = memtableRecords
 	latestTimestamps := make(map[string]int64)
 
 	sstablePaths, err := os.ReadDir(SSTableFolderPath)
@@ -1441,10 +1437,6 @@ func (sstable *SSTableInstance) RangeScan(start, end string, memtableRecords []*
 
 			if record.Key >= start && record.Key <= end {
 
-				if recordExists(memtableRecords, record.Key) {
-					continue
-				}
-
 				if storedTimestamp, exists := latestTimestamps[record.Key]; exists {
 					if record.Timestamp > storedTimestamp {
 						latestTimestamps[record.Key] = record.Timestamp
@@ -1475,14 +1467,4 @@ func replaceRecord(records []*rec.Record, newRecord *rec.Record) {
 			return
 		}
 	}
-}
-
-// check if the record with a specific key exists in memtableRecords
-func recordExists(memtableRecords []*rec.Record, keyToCheck string) bool {
-	for _, record := range memtableRecords {
-		if record.Key == keyToCheck {
-			return true
-		}
-	}
-	return false
 }
