@@ -29,10 +29,9 @@ func Get(key string) (record.Record, bool) {
 }
 
 func PrefixScan(key string) []record.Record {
-	memtableRecords := inicialize.Memtables.PrefixScan(key)
 
-	var sstableRecords []*record.Record
-	// sstableRecords := sstable.PrefixScanAll(start, end, pageNumber, pageSize, memtableRecords)
+	memtableRecords := inicialize.Memtables.PrefixScan(key)
+	sstableRecords := sstable.PrefixScan(key, memtableRecords)
 
 	allRecords := append(memtableRecords, sstableRecords...)
 
