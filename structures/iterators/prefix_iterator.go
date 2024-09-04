@@ -125,6 +125,21 @@ func MakePrefixIterator(minstances []memtable.Memtable, prefix string) *PrefixIt
 	for _, instance := range minstances {
 		tempMemRecords = append(tempMemRecords, instance.Structure.GetItems()...)
 	}
+
+	recordMap := make(map[string]record.Record)
+	for _, rec := range tempMemRecords {
+		savedRec, exists := recordMap[rec.Key]
+		if exists {
+			if rec.Timestamp > savedRec.Timestamp {
+				recordMap[rec.Key] = rec
+			}
+		}
+	}
+	tempMemRecords = make([]record.Record, 0)
+	for _, rec := range recordMap {
+		tempMemRecords = append(tempMemRecords, rec)
+	}
+
 	sort.Slice(tempMemRecords, func(i, j int) bool {
 		return tempMemRecords[i].Key < tempMemRecords[j].Key
 	})
