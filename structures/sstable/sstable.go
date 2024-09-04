@@ -7,6 +7,7 @@ import (
 	"hash/crc32"
 	"log"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -1345,4 +1346,143 @@ func (sstable *SSTableInstance) CheckIfContainsPrefix(prefix string) bool {
 	}
 
 	return isPossiblyContained
+}
+
+func (sstable *SSTableInstance) PrefixScan(key string, memtableRecords []*rec.Record) []*rec.Record {
+
+	var records []*rec.Record
+	latestTimestamps := make(map[string]int64)
+
+	sstablePaths, err := os.ReadDir(SSTableFolderPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	sstableInstances := make([]SSTableInstance, 0)
+	for _, path := range sstablePaths {
+		sstableInstances = append(sstableInstances, OpenSSTable(path.Name()))
+	}
+
+	var count int
+	for _, sstableIns := range sstableInstances {
+		if !sstableIns.CheckIfContainsPrefix(key) {
+			continue
+		}
+
+		for {
+			record, exists := sstableIns.ReadRecord()
+
+			if !exists {
+				break
+			}
+
+			if record.Tombstone {
+				continue
+			}
+
+			if strings.HasPrefix(record.Key, key) {
+
+				if recordExists(memtableRecords, record.Key) {
+					continue
+				}
+
+				if storedTimestamp, exists := latestTimestamps[record.Key]; exists {
+					if record.Timestamp > storedTimestamp {
+						latestTimestamps[record.Key] = record.Timestamp
+						replaceRecord(records, &record)
+					}
+				} else {
+					latestTimestamps[record.Key] = record.Timestamp
+					records = append(records, &record)
+					count++
+				}
+			}
+		}
+	}
+
+	sort.Slice(records, func(i, j int) bool {
+		return records[i].Key < records[j].Key
+	})
+
+	return records
+}
+
+func (sstable *SSTableInstance) RangeScan(start, end string, memtableRecords []*rec.Record) []*rec.Record {
+
+	var records []*rec.Record
+	latestTimestamps := make(map[string]int64)
+
+	sstablePaths, err := os.ReadDir(SSTableFolderPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	sstableInstances := make([]SSTableInstance, 0)
+	for _, path := range sstablePaths {
+		sstableInstances = append(sstableInstances, OpenSSTable(path.Name()))
+	}
+
+	var count int
+	for _, sstableIns := range sstableInstances {
+		if !sstableIns.CheckIfContainsRange(start, end) {
+			continue
+		}
+
+		for {
+			record, exists := sstableIns.ReadRecord()
+
+			if !exists {
+				break
+			}
+
+			if record.Tombstone {
+				continue
+			}
+
+			if record.Key >= start && record.Key <= end {
+
+				if recordExists(memtableRecords, record.Key) {
+					continue
+				}
+
+				if storedTimestamp, exists := latestTimestamps[record.Key]; exists {
+					if record.Timestamp > storedTimestamp {
+						latestTimestamps[record.Key] = record.Timestamp
+						replaceRecord(records, &record)
+					}
+				} else {
+					latestTimestamps[record.Key] = record.Timestamp
+					records = append(records, &record)
+					count++
+				}
+			}
+		}
+	}
+
+	sort.Slice(records, func(i, j int) bool {
+		return records[i].Key < records[j].Key
+	})
+
+	return records
+}
+
+// replaceRecord replaces the existing record with a newer one
+
+func replaceRecord(records []*rec.Record, newRecord *rec.Record) {
+	for i, existingRecord := range records {
+		if existingRecord.Key == newRecord.Key {
+			records[i] = newRecord
+			return
+		}
+	}
+}
+
+// check if the record with a specific key exists in memtableRecords
+func recordExists(memtableRecords []*rec.Record, keyToCheck string) bool {
+	for _, record := range memtableRecords {
+		if record.Key == keyToCheck {
+			return true
+		}
+	}
+	return false
 }
