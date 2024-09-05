@@ -1,11 +1,13 @@
 package lsm_tree
 
 import (
+	"fmt"
 	"log"
 	"math/rand"
 	"os"
 	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/IvanaaXD/NASP/app/config"
 	rec "github.com/IvanaaXD/NASP/structures/record"
@@ -130,7 +132,7 @@ func getWantedPathsForLeveledAlgorithm(lsmLevel int) []string {
 	for _, path := range possibleMatches {
 		sstable := sst.OpenSSTable(path)
 		otherFirst, otherLast := sstable.GetFirstAndLastKeyInSSTable()
-		if otherFirst >= firstKey && otherLast <= lastKey {
+		if otherLast >= firstKey || otherFirst <= lastKey {
 			finalPaths = append(finalPaths, path)
 		}
 	}
@@ -254,7 +256,125 @@ func compactByLevel(lsmLevel int) {
 	newCreator.CreateMerkle()
 	newCreator.CreateMetadata()
 
+	fixIndexAndDeleteUsedSSTables(lsmLevel+1, paths)
+}
+
+func fixIndexAndDeleteUsedSSTables(lsmLevel int, usedPaths []string) {
+	config.Init()
+	// determine which index the newly created sstable needs
+	paths := extractSSTablePathsOfLSMLevel(lsmLevel)
+	newestTable := sst.OpenSSTable(paths[0])
+
+	paths = paths[1:]
+	sinstances := make([]sst.SSTableInstance, 0)
 	for _, path := range paths {
+		sinstances = append(sinstances, sst.OpenSSTable(path))
+	}
+
+	newestFirstKey, newestLastKey := newestTable.GetFirstAndLastKeyInSSTable()
+
+	inRangeValues := make([]bool, len(sinstances))
+	mostRecentKeys := make(map[string]string)
+
+	for index, instance := range sinstances {
+		ignoreFirstKey, ignoreLastKey := false, false
+		key1, key2 := instance.GetFirstAndLastKeyInSSTable()
+		inRangeValues[index] = instance.CheckIfContainsRange(newestFirstKey, newestLastKey)
+
+		for otherIndex, otherInstance := range sinstances {
+			if otherIndex >= index {
+				break
+			}
+
+			if isPossiblyContained(otherInstance, key1) {
+				ignoreFirstKey = true
+			}
+
+			if isPossiblyContained(otherInstance, key2) {
+				ignoreLastKey = true
+			}
+
+		}
+
+		if !ignoreFirstKey {
+			_, ok := mostRecentKeys[key1]
+			if !ok {
+				mostRecentKeys[key1] = paths[index]
+			}
+		}
+
+		if !ignoreLastKey {
+			_, ok := mostRecentKeys[key2]
+			if !ok {
+				mostRecentKeys[key2] = paths[index]
+			}
+		}
+	}
+
+	bestFittingIndex := 0
+
+	unmergedPaths := make([]string, 0)
+	for _, path := range paths {
+		if !slices.Contains(usedPaths, path) {
+			unmergedPaths = append(unmergedPaths, path)
+		}
+	}
+
+	for key, relevantPath := range mostRecentKeys {
+		if isPossiblyContained(newestTable, key) && !slices.Contains(usedPaths, relevantPath) && bestFittingIndex <= slices.Index(unmergedPaths, relevantPath)+1 {
+			bestFittingIndex = slices.Index(unmergedPaths, relevantPath) + 1
+		}
+	}
+
+	// delete usedPaths BUT ONLY AFTER THE NAMES THEMSELVES HAVE BEEN UPDATED ACCORDINGLY
+	for _, path := range usedPaths {
 		os.Remove(sst.SSTableFolderPath + "/" + path)
 	}
+
+	newPaths := make([]string, 0)
+
+	for index, path := range unmergedPaths {
+		newPath := fmt.Sprintf("temptable%04d", index)
+		if strings.Contains(path, ".bin") {
+			newPath += ".bin"
+		}
+		newPaths = append(newPaths, newPath)
+		os.Rename(sst.SSTableFolderPath+"/"+path, sst.SSTableFolderPath+"/"+newPath)
+	}
+
+	var newestTablePath string
+	if config.GlobalConfig.SSTFiles == "one" {
+		newestTablePath = sst.SSTableFolderPath + "/" + "tempnewtable.bin"
+	} else {
+		newestTablePath = sst.SSTableFolderPath + "/" + "tempnewtable"
+	}
+	os.Rename(sst.SSTableFolderPath+"/"+fmt.Sprintf("%04dsstable0001", lsmLevel), newestTablePath)
+
+	isNewTableInserted := false
+	for index, newPath := range newPaths {
+		var path string
+		if index == bestFittingIndex {
+			path = fmt.Sprintf("%04dsstable%04d", lsmLevel, index+1)
+			if strings.Contains(newestTablePath, ".bin") {
+				path += ".bin"
+			}
+			os.Rename(newestTablePath, sst.SSTableFolderPath+"/"+newPath)
+		}
+		if isNewTableInserted {
+			path = fmt.Sprintf("%04dsstable%04d", lsmLevel, index+1)
+		} else {
+			path = fmt.Sprintf("%04dsstable%04d", lsmLevel, index)
+		}
+
+		if strings.Contains(newPath, ".bin") {
+			path += ".bin"
+		}
+
+		os.Rename(sst.SSTableFolderPath+"/"+newPath, sst.SSTableFolderPath+"/"+path)
+	}
+}
+
+func isPossiblyContained(sstable sst.SSTableInstance, key string) bool {
+	first, last := sstable.GetFirstAndLastKeyInSSTable()
+	return first <= key && key <= last
 }
