@@ -230,8 +230,8 @@ func compactByLevel(lsmLevel int) {
 	currentRecords := make([]rec.Record, len(sstableInstances))
 	isReadArray := make([]bool, len(sstableInstances))
 
-	for index, instance := range sstableInstances {
-		currentRecords[index], isReadArray[index] = instance.ReadRecord()
+	for index := range sstableInstances {
+		currentRecords[index], isReadArray[index] = sstableInstances[index].ReadRecord()
 	}
 
 	for !isEverythingFullyRead(isReadArray) {
@@ -288,10 +288,10 @@ func fixIndexAndDeleteUsedSSTables(lsmLevel int, usedPaths []string) {
 	inRangeValues := make([]bool, len(sinstances))
 	mostRecentKeys := make(map[string]string)
 
-	for index, instance := range sinstances {
+	for index := range sinstances {
 		ignoreFirstKey, ignoreLastKey := false, false
-		key1, key2 := instance.GetFirstAndLastKeyInSSTable()
-		inRangeValues[index] = instance.CheckIfContainsRange(newestFirstKey, newestLastKey)
+		key1, key2 := sinstances[index].GetFirstAndLastKeyInSSTable()
+		inRangeValues[index] = sinstances[index].CheckIfContainsRange(newestFirstKey, newestLastKey)
 
 		for otherIndex, otherInstance := range sinstances {
 			if otherIndex >= index {
