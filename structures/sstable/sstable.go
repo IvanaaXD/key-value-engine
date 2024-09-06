@@ -342,7 +342,7 @@ func UpdateSSTableNames(lsmLevel int) {
 	// iteriraj u obrnutom redosledu (da ne bi doslo do errora)
 	for i := len(pathsToChange) - 1; i >= 0; i-- {
 		// podeli "XXXXsstableYYYY[.bin]"
-		splitPath := strings.Split(pathsToChange[i], "sstables")
+		splitPath := strings.Split(pathsToChange[i], "sstable")
 		// uzmi YYYY
 		oldIndex := splitPath[1][:4]
 		// pretvori indeks u broj i povecaj ga za jedan
@@ -408,6 +408,9 @@ func CreateNewSSTable(records []rec.Record) {
 	newCreator := MakeNewSSTableCreator(*newSSTableInstance)
 
 	for _, record := range records {
+		if record.Key == config.TB_PREFIX+"key" {
+			continue
+		}
 		newCreator.WriteRecord(record)
 	}
 	newCreator.CreateIndex()
@@ -428,6 +431,11 @@ func OpenSSTable(filename string) SSTableInstance {
 	var merkleOffset int64 = 0
 	var bloomOffset int64 = 0
 	actualPath := SSTableFolderPath + "/" + filename
+
+	if strings.Contains(filename, ".bin") {
+		singlefile = true
+	}
+
 	_, err := os.Stat(actualPath)
 	if err == os.ErrNotExist {
 		actualPath += ".bin"
@@ -455,6 +463,7 @@ func OpenSSTable(filename string) SSTableInstance {
 		summaryOffset = int64(binary.LittleEndian.Uint64(metaBytes[33:41]))
 		summaryLastElemOffset = int64(binary.LittleEndian.Uint64(metaBytes[41:49]))
 		merkleOffset = int64(binary.LittleEndian.Uint64(metaBytes[49:]))
+		file.Close()
 	} else {
 		file, err := os.OpenFile(actualPath+"/meta.bin", os.O_RDONLY, 0777)
 		if err != nil {
@@ -467,6 +476,7 @@ func OpenSSTable(filename string) SSTableInstance {
 		}
 		indexLastElemOffset = int64(binary.LittleEndian.Uint64(metaBytes[1:9]))
 		summaryLastElemOffset = int64(binary.LittleEndian.Uint64(metaBytes[9:]))
+		file.Close()
 	}
 	return SSTableInstance{filename: actualPath, currentOffset: 0, isSingleFile: singlefile, isCompressed: compression,
 		indexBeginOffset: indexOffset, indexLastElementOffset: indexLastElemOffset, summaryBeginOffset: summaryOffset, summaryLastElementOffset: summaryLastElemOffset,
@@ -576,6 +586,8 @@ func (sstable *SSTableInstance) ReadRecord() (rec.Record, bool) {
 	if crcCurrent != uint32(crcActual) {
 		fmt.Println("Oprez! Moguce je da dobijena vrednost nije validna!")
 	}
+
+	file.Close()
 	return recordActual, true
 }
 

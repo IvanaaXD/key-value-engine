@@ -635,7 +635,7 @@ func Menu() error {
 				fmt.Println("Too many requests. Please wait.")
 			} else {
 				start, end := RangeIterateInput()
-				GetRangeIteratorPage(start, end)
+				RangeIterate(start, end)
 			}
 
 		case "7": // PREFIX ITERATOR
@@ -643,7 +643,7 @@ func Menu() error {
 				fmt.Println("Too many requests. Please wait.")
 			} else {
 				prefix := PrefixIterateInput()
-				GetPrefixIteratorPage(prefix)
+				PrefixIterate(prefix)
 			}
 
 		case "8": // MAKE NEW BF

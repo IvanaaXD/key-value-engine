@@ -118,7 +118,7 @@ func (iter *RangeIterator) findLexicallySmallestRecord() (record.Record, bool) {
 
 // Konstruktor za Range iterator. Prosledjuju se instance memtabeli koje se trenutno koriste u sistemu i
 // pocetak i kraj opsega nad kojim se traze kljucevi
-func MakeRangeIterator(minstances []memtable.Memtable, begin, end string) *RangeIterator {
+func MakeRangeIterator(minstances []*memtable.Memtable, begin, end string) *RangeIterator {
 	// memtables
 	tempMemRecords := make([]record.Record, 0)
 

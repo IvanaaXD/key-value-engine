@@ -10,40 +10,11 @@ func GetRangePage(start, end string, pageNum, pageSize int) {
 
 	var records = RangeScan(start, end)
 
-	/*var numOfRecords int
-	var numOfPages int
-
-	numOfRecords = pageSize
-
-	numOfPages = int(math.Ceil(float64(len(records)) / float64(numOfRecords)))
-
-	for {
-		var pageRecords []record.Record
-		if (pageNum-1)*numOfRecords+numOfRecords > len(records) {
-			pageRecords = records[(pageNum-1)*numOfRecords:]
-		} else {
-			pageRecords = records[(pageNum-1)*numOfRecords : (pageNum-1)*numOfRecords+numOfRecords]
-		}
-		movePages := printPage(pageRecords, pageNum, numOfPages)
-		if movePages == 0 {
-			break
-		} else {
-			pageNum += movePages
-
-			if movePages == 1 {
-				var newRecords = RangeScan(start, end, movePages, pageSize)
-				records = append(records, newRecords...)
-			}
-
-			continue
-		}
-	}*/
-
 	startIndex := (pageNum - 1) * pageSize
 	endIndex := startIndex + pageSize
 
 	if endIndex > len(records) {
-		endIndex = len(records)
+		endIndex = len(records) - 1
 	}
 
 	if startIndex >= len(records) {
@@ -59,35 +30,6 @@ func GetPrefixPage(prefix string, pageNum, pageSize int) {
 
 	var records = PrefixScan(prefix)
 
-	/*var numOfRecords int
-	var numOfPages int
-
-	numOfRecords = pageSize
-
-	numOfPages = int(math.Ceil(float64(len(records)) / float64(numOfRecords)))
-
-	for {
-		var pageRecords []record.Record
-		if (pageNum-1)*numOfRecords+numOfRecords > len(records) {
-			pageRecords = records[(pageNum-1)*numOfRecords:]
-		} else {
-			pageRecords = records[(pageNum-1)*numOfRecords : (pageNum-1)*numOfRecords+numOfRecords]
-		}
-		movePages := printPage(pageRecords, pageNum, numOfPages)
-		if movePages == 0 {
-			break
-		} else {
-			pageNum += movePages
-
-			if movePages == 1 {
-				var newRecords = PrefixScan(prefix, movePages, pageSize)
-				records = append(records, newRecords...)
-			}
-
-			continue
-		}
-	}*/
-
 	startIndex := (pageNum - 1) * pageSize
 	endIndex := startIndex + pageSize
 
@@ -104,72 +46,11 @@ func GetPrefixPage(prefix string, pageNum, pageSize int) {
 	printRecords(pageRecords)
 }
 
-func GetRangeIteratorPage(start, end string) {
-	var records = RangeIterate(start, end)
-
-	var numOfRecords = 1
-	var numOfPages = (len(records) + numOfRecords - 1) / numOfRecords
-	currentPage := 1
-
-	for {
-		var pageRecords []record.Record
-		startIdx := (currentPage - 1) * numOfRecords
-		endIdx := startIdx + numOfRecords
-		if endIdx > len(records) {
-			endIdx = len(records)
-		}
-		pageRecords = records[startIdx:endIdx]
-
-		movePages := printPage(pageRecords, currentPage, numOfPages)
-		if movePages == 0 {
-			break
-		} else {
-			currentPage += movePages
-			if currentPage > numOfPages || currentPage < 1 {
-				println("No more pages!")
-				break
-			}
-			continue
-		}
-	}
-}
-
-func GetPrefixIteratorPage(prefix string) {
-
-	var records = PrefixIterate(prefix)
-
-	var numOfRecords = 1
-	var numOfPages = (len(records) + numOfRecords - 1) / numOfRecords
-	currentPage := 1
-
-	for {
-		var pageRecords []record.Record
-		startIdx := (currentPage - 1) * numOfRecords
-		endIdx := startIdx + numOfRecords
-		if endIdx > len(records) {
-			endIdx = len(records)
-		}
-		pageRecords = records[startIdx:endIdx]
-
-		movePages := printPage(pageRecords, currentPage, numOfPages)
-		if movePages == 0 {
-			break
-		} else {
-			currentPage += movePages
-			if currentPage > numOfPages || currentPage < 1 {
-				println("No more pages!")
-				break
-			}
-			continue
-		}
-	}
-}
-
-func printPage(records []record.Record, pageNum, numOfPages int) int {
+func printPage(record record.Record, pageNum, numOfPages int) int {
 	var next string
 
 	fmt.Printf("\n=========================PAGE %d=========================\n", pageNum)
-	printRecords(records)
+	fmt.Printf("%s : %s\n", record.Key, string(record.Value))
 
 	switch pageNum {
 	case 1:

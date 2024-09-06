@@ -1,7 +1,9 @@
 package io
 
 import (
+	"fmt"
 	"github.com/IvanaaXD/NASP/inicialize"
+	"github.com/IvanaaXD/NASP/structures/iterators"
 	"github.com/IvanaaXD/NASP/structures/record"
 	"github.com/IvanaaXD/NASP/structures/sstable"
 	"sort"
@@ -46,8 +48,8 @@ func PrefixScan(key string) []record.Record {
 }
 
 func RangeScan(start, end string) []record.Record {
-	memtableRecords := inicialize.Memtables.RangeScan(start, end)
 
+	memtableRecords := inicialize.Memtables.RangeScan(start, end)
 	sstableRecords := sstable.RangeScan(start, end, memtableRecords)
 
 	sort.Slice(sstableRecords, func(i, j int) bool {
@@ -82,22 +84,32 @@ func PrefixIterate(key string) []record.Record {
 	return result
 }
 
-func RangeIterate(start, end string) []record.Record {
-	memtableRecords := inicialize.Memtables.RangeIterate(start, end)
+func RangeIterate(start, end string) {
 
-	var sstableRecords []*record.Record
-	// sstableRecords = sstable.RangeIterateAll(start, end, pageNumber, pageSize, memtableRecords, oldRecords)
+	iter := iterators.MakeRangeIterator(inicialize.Memtables.Tables, start, end)
 
-	allRecords := append(memtableRecords, sstableRecords...)
-
-	sort.Slice(allRecords, func(i, j int) bool {
-		return allRecords[i].Key < allRecords[j].Key
-	})
-
-	result := make([]record.Record, len(allRecords))
-	for i, rec := range allRecords {
-		result[i] = *rec
+	record, exists := iter.GetNext()
+	if !exists {
+		fmt.Println("There are no records in range")
+		return
 	}
 
-	return result
+	var numOfRecords = 1
+	var numOfPages = (1 + numOfRecords - 1) / numOfRecords
+	currentPage := 1
+
+	for {
+		movePages := printPage(record, currentPage, numOfPages)
+		if movePages == 0 {
+			break
+		} else {
+			currentPage += movePages
+			record, exists = iter.GetNext()
+			if !exists {
+				println("No more pages!")
+				break
+			}
+			continue
+		}
+	}
 }
