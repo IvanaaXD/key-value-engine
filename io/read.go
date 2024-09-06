@@ -63,7 +63,7 @@ func RangeScan(start, end string) []record.Record {
 	return result
 }
 
-func PrefixIterate(key string) []record.Record {
+func PrefixIterate(key string) {
 
 	iter := iterators.MakePrefixIterator(inicialize.Memtables.Tables, key)
 
