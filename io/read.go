@@ -64,23 +64,28 @@ func RangeScan(start, end string) []record.Record {
 }
 
 func PrefixIterate(key string) []record.Record {
-	memtableRecords := inicialize.Memtables.PrefixIterate(key)
 
-	var sstableRecords []*record.Record
-	// sstableRecords = sstable.PrefixIterateAll(start, end, pageNumber, pageSize, memtableRecords, oldRecords)
+	iter := iterators.MakePrefixIterator(inicialize.Memtables.Tables, key)
 
-	allRecords := append(memtableRecords, sstableRecords...)
+	var numOfRecords = 1
+	var numOfPages = (1 + numOfRecords - 1) / numOfRecords
+	currentPage := 1
 
-	sort.Slice(allRecords, func(i, j int) bool {
-		return allRecords[i].Key < allRecords[j].Key
-	})
+	for {
+		record, exists := iter.GetNext()
+		if !exists {
+			println("No more pages!")
+			break
+		}
 
-	result := make([]record.Record, len(allRecords))
-	for i, rec := range allRecords {
-		result[i] = *rec
+		movePages := printPage(record, currentPage, numOfPages)
+		if movePages == 0 {
+			break
+		} else {
+			currentPage += movePages
+			continue
+		}
 	}
-
-	return result
 }
 
 func RangeIterate(start, end string) {
