@@ -535,6 +535,7 @@ func (sstable *SSTableInstance) ReadRecord() (rec.Record, bool) {
 
 	fileInfo, _ := file.Stat()
 	if (!sstable.isSingleFile && sstable.currentOffset == fileInfo.Size()) || (sstable.isSingleFile && sstable.dataBeginOffset+sstable.currentOffset >= sstable.indexBeginOffset) {
+		file.Close()
 		return rec.Record{}, false
 	}
 
