@@ -634,6 +634,8 @@ func (sstable *SSTableInstance) readIndexRecordForKey(key string) (uint64, byte)
 	file.Read(offsetBytes)
 	offset := binary.LittleEndian.Uint64(offsetBytes)
 
+	sstable.currentOffset += int64(len(keyLengthBytes) + len(keyBytes) + len(offsetBytes))
+
 	if recordKey < key {
 		return offset, 0
 	}
@@ -680,6 +682,8 @@ func (sstable *SSTableInstance) readSummaryRecordForKey(key string) (uint64, byt
 	offsetBytes := make([]byte, 8)
 	file.Read(offsetBytes)
 	offset := binary.LittleEndian.Uint64(offsetBytes)
+
+	sstable.currentOffset += int64(len(keyLengthBytes) + len(keyBytes) + len(offsetBytes))
 
 	if recordKey < key {
 		return offset, 0
