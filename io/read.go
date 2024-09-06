@@ -1,7 +1,6 @@
 package io
 
 import (
-	"fmt"
 	"github.com/IvanaaXD/NASP/inicialize"
 	"github.com/IvanaaXD/NASP/structures/iterators"
 	"github.com/IvanaaXD/NASP/structures/record"
@@ -88,27 +87,22 @@ func RangeIterate(start, end string) {
 
 	iter := iterators.MakeRangeIterator(inicialize.Memtables.Tables, start, end)
 
-	record, exists := iter.GetNext()
-	if !exists {
-		fmt.Println("There are no records in range")
-		return
-	}
-
 	var numOfRecords = 1
 	var numOfPages = (1 + numOfRecords - 1) / numOfRecords
 	currentPage := 1
 
 	for {
+		record, exists := iter.GetNext()
+		if !exists {
+			println("No more pages!")
+			break
+		}
+
 		movePages := printPage(record, currentPage, numOfPages)
 		if movePages == 0 {
 			break
 		} else {
 			currentPage += movePages
-			record, exists = iter.GetNext()
-			if !exists {
-				println("No more pages!")
-				break
-			}
 			continue
 		}
 	}
