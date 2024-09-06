@@ -38,11 +38,11 @@ func (iter *RangeIterator) loadNewRecord(indexToLoad int) {
 		replacementRecord, replacementIsRead := iter.sstableInstances[indexToLoad].ReadRecord()
 
 		if iter.begin <= replacementRecord.Key && replacementRecord.Key <= iter.end {
-			iter.currentRecords[indexToLoad] = replacementRecord
-			iter.isValid[indexToLoad] = replacementIsRead
+			iter.currentRecords[indexToLoad+1] = replacementRecord
+			iter.isValid[indexToLoad+1] = replacementIsRead
 		} else {
-			iter.currentRecords[indexToLoad] = record.Record{}
-			iter.isValid[indexToLoad] = false
+			iter.currentRecords[indexToLoad+1] = record.Record{}
+			iter.isValid[indexToLoad+1] = false
 		}
 
 	}
