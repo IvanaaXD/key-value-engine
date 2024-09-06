@@ -161,7 +161,7 @@ func MakeRangeIterator(minstances []*memtable.Memtable, begin, end string) *Rang
 
 	tempSinstances := make([]sstable.SSTableInstance, 0)
 	for _, path := range sstablePaths {
-		tempSinstances = append(actualSinstances, sstable.OpenSSTable(path.Name()))
+		tempSinstances = append(tempSinstances, sstable.OpenSSTable(path.Name()))
 	}
 
 	for _, instance := range tempSinstances {
