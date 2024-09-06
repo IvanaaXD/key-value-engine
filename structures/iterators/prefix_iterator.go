@@ -112,6 +112,9 @@ func (iter *PrefixIterator) findLexicallySmallestRecord() (record.Record, bool) 
 	// update currentRecords and isValid arrays with new values
 	returningRecord := iter.currentRecords[smallestIndex]
 	iter.loadNewRecord(smallestIndex)
+	if returningRecord.Key == iter.currentRecords[smallestIndex].Key && returningRecord.Timestamp == iter.currentRecords[smallestIndex].Timestamp && returningRecord.Tombstone == iter.currentRecords[smallestIndex].Tombstone {
+		iter.loadNewRecord(smallestIndex)
+	}
 
 	return returningRecord, true
 }
