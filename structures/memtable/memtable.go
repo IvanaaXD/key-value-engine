@@ -7,6 +7,7 @@ import (
 	b_tree "github.com/IvanaaXD/NASP/structures/b-tree"
 	hash_map "github.com/IvanaaXD/NASP/structures/hash-map"
 	"github.com/IvanaaXD/NASP/structures/iterator"
+	lsm_tree "github.com/IvanaaXD/NASP/structures/lsm-tree"
 	"github.com/IvanaaXD/NASP/structures/record"
 	skip_list "github.com/IvanaaXD/NASP/structures/skip-list"
 	"github.com/IvanaaXD/NASP/structures/sstable"
@@ -96,12 +97,7 @@ func (m *Memtable) Flush() error {
 	})
 
 	sstable.CreateNewSSTable(records)
-
-	/*if config.GlobalConfig.CompactionAlgorithm == "sizeTiered" {
-		lsm_tree.SizeTieredCompaction(1)
-	} else {
-		lsm_tree.LeveledCompaction(1)
-	}*/
+	lsm_tree.InitializeLSMCheck()
 
 	fmt.Println("Memtable flushed")
 	return nil
