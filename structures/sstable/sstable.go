@@ -1230,7 +1230,7 @@ func (sstable *SSTableCreator) WriteRecord(record rec.Record) {
 // Vraca true ako sadrzi opseg ili deo opsega, vraca false ako ne
 func (sstable *SSTableInstance) CheckIfContainsRange(start, finish string) bool {
 	firstKey, lastKey := sstable.GetFirstAndLastKeyInSSTable()
-	isContained := firstKey <= finish || lastKey >= start
+	isContained := firstKey <= finish && lastKey >= start
 
 	if isContained {
 		//	7) Pozicionirati se na najblizi element u summary
