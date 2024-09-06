@@ -184,6 +184,12 @@ func compactBySizeTier(lsmLevel int, paths []string) {
 				currentRecords[toChangeIndex] = replacementRecord
 				isReadArray[toChangeIndex] = replacementIsRead
 
+				if replacementRecord.Key == currentRecords[toChangeIndex].Key && replacementRecord.Timestamp == currentRecords[toChangeIndex].Timestamp && replacementRecord.Tombstone == currentRecords[toChangeIndex].Tombstone {
+					replacementRecord, replacementIsRead = sstableInstances[toChangeIndex].ReadRecord()
+					currentRecords[toChangeIndex] = replacementRecord
+					isReadArray[toChangeIndex] = replacementIsRead
+				}
+
 				isOverlapFound, overlappingRecords = findRepeatingRecords(currentRecords, isReadArray)
 			}
 		}
@@ -236,6 +242,12 @@ func compactByLevel(lsmLevel int) {
 				replacementRecord, replacementIsRead := sstableInstances[toChangeIndex].ReadRecord()
 				currentRecords[toChangeIndex] = replacementRecord
 				isReadArray[toChangeIndex] = replacementIsRead
+
+				if replacementRecord.Key == currentRecords[toChangeIndex].Key && replacementRecord.Timestamp == currentRecords[toChangeIndex].Timestamp && replacementRecord.Tombstone == currentRecords[toChangeIndex].Tombstone {
+					replacementRecord, replacementIsRead = sstableInstances[toChangeIndex].ReadRecord()
+					currentRecords[toChangeIndex] = replacementRecord
+					isReadArray[toChangeIndex] = replacementIsRead
+				}
 
 				isOverlapFound, overlappingRecords = findRepeatingRecords(currentRecords, isReadArray)
 			}
