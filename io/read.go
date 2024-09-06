@@ -1,7 +1,6 @@
 package io
 
 import (
-	"fmt"
 	"github.com/IvanaaXD/NASP/inicialize"
 	"github.com/IvanaaXD/NASP/structures/iterators"
 	"github.com/IvanaaXD/NASP/structures/record"
@@ -64,51 +63,51 @@ func RangeScan(start, end string) []record.Record {
 	return result
 }
 
-func PrefixIterate(key string) []record.Record {
-	memtableRecords := inicialize.Memtables.PrefixIterate(key)
+func PrefixIterate(key string) {
 
-	var sstableRecords []*record.Record
-	// sstableRecords = sstable.PrefixIterateAll(start, end, pageNumber, pageSize, memtableRecords, oldRecords)
-
-	allRecords := append(memtableRecords, sstableRecords...)
-
-	sort.Slice(allRecords, func(i, j int) bool {
-		return allRecords[i].Key < allRecords[j].Key
-	})
-
-	result := make([]record.Record, len(allRecords))
-	for i, rec := range allRecords {
-		result[i] = *rec
-	}
-
-	return result
-}
-
-func RangeIterate(start, end string) {
-
-	iter := iterators.MakeRangeIterator(inicialize.Memtables.Tables, start, end)
-
-	record, exists := iter.GetNext()
-	if !exists {
-		fmt.Println("There are no records in range")
-		return
-	}
+	iter := iterators.MakePrefixIterator(inicialize.Memtables.Tables, key)
 
 	var numOfRecords = 1
 	var numOfPages = (1 + numOfRecords - 1) / numOfRecords
 	currentPage := 1
 
 	for {
+		record, exists := iter.GetNext()
+		if !exists {
+			println("No more pages!")
+			break
+		}
+
 		movePages := printPage(record, currentPage, numOfPages)
 		if movePages == 0 {
 			break
 		} else {
 			currentPage += movePages
-			record, exists = iter.GetNext()
-			if !exists {
-				println("No more pages!")
-				break
-			}
+			continue
+		}
+	}
+}
+
+func RangeIterate(start, end string) {
+
+	iter := iterators.MakeRangeIterator(inicialize.Memtables.Tables, start, end)
+
+	var numOfRecords = 1
+	var numOfPages = (1 + numOfRecords - 1) / numOfRecords
+	currentPage := 1
+
+	for {
+		record, exists := iter.GetNext()
+		if !exists {
+			println("No more pages!")
+			break
+		}
+
+		movePages := printPage(record, currentPage, numOfPages)
+		if movePages == 0 {
+			break
+		} else {
+			currentPage += movePages
 			continue
 		}
 	}

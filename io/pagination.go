@@ -52,32 +52,15 @@ func printPage(record record.Record, pageNum, numOfPages int) int {
 	fmt.Printf("\n=========================PAGE %d=========================\n", pageNum)
 	fmt.Printf("%s : %s\n", record.Key, string(record.Value))
 
-	switch pageNum {
-	case 1:
-		if pageNum == numOfPages {
-			fmt.Println("-------------------------------------------------------")
-			fmt.Println("		                	X	                		")
-		} else {
-			fmt.Println("-------------------------------------------------------")
-			fmt.Println("		                	X	                	next")
-		}
-	case numOfPages:
-		fmt.Println("-------------------------------------------------------")
-		fmt.Println("		                	X	                		")
-	default:
-		fmt.Println("-------------------------------------------------------")
-		fmt.Println("		                	X	                	next")
-	}
+	fmt.Println("-------------------------------------------------------")
+	fmt.Println("		                	X	                	next")
 
 	for {
 		fmt.Scanln(&next)
 		next = strings.ToLower(next)
 		switch next {
 		case "next":
-			if pageNum != numOfPages {
-				return 1
-			}
-			fmt.Println("There are no next pages. Try again... ")
+			return 1
 
 		case "stop":
 			return 0
