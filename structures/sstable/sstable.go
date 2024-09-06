@@ -772,7 +772,7 @@ func (sstable *SSTableCreator) CreateSummary() {
 				if err != nil {
 					log.Fatal(err)
 				}
-				file.Seek(0, 2)
+				sstable.Instance.summaryLastElementOffset, _ = file.Seek(0, 2)
 				file.Write(summaryBytes)
 				file.Close()
 				break
@@ -842,6 +842,8 @@ func (sstable *SSTableCreator) CreateSummary() {
 				summaryBytes = append(summaryBytes, keyLengthBytes...)
 				summaryBytes = append(summaryBytes, []byte(finalKey)...)
 				summaryBytes = append(summaryBytes, offsetBytes...)
+
+				sstable.Instance.summaryLastElementOffset, _ = summaryFile.Seek(0, 2)
 
 				summaryFile.Write(summaryBytes)
 				break
@@ -919,7 +921,7 @@ func (sstable *SSTableCreator) CreateIndex() {
 				if err != nil {
 					log.Fatal(err)
 				}
-				file.Seek(0, 2)
+				sstable.Instance.indexLastElementOffset, _ = file.Seek(0, 2)
 				file.Write(indexBytes)
 				file.Close()
 				break
@@ -993,6 +995,8 @@ func (sstable *SSTableCreator) CreateIndex() {
 				indexBytes = append(indexBytes, keyLengthBytes...)
 				indexBytes = append(indexBytes, []byte(finalKey)...)
 				indexBytes = append(indexBytes, offsetBytes...)
+
+				sstable.Instance.indexLastElementOffset, _ = indexFile.Seek(0, 2)
 
 				indexFile.Write(indexBytes)
 				break
