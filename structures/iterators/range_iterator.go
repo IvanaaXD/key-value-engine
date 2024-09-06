@@ -112,9 +112,6 @@ func (iter *RangeIterator) findLexicallySmallestRecord() (record.Record, bool) {
 	// update currentRecords and isValid arrays with new values
 	returningRecord := iter.currentRecords[smallestIndex]
 	iter.loadNewRecord(smallestIndex)
-	if returningRecord.Key == iter.currentRecords[smallestIndex].Key && returningRecord.Timestamp == iter.currentRecords[smallestIndex].Timestamp && returningRecord.Tombstone == iter.currentRecords[smallestIndex].Tombstone {
-		iter.loadNewRecord(smallestIndex)
-	}
 
 	return returningRecord, true
 }
@@ -185,8 +182,8 @@ func MakeRangeIterator(minstances []*memtable.Memtable, begin, end string) *Rang
 		beginningValidity[0] = false
 	}
 
-	for index, instance := range actualSinstances {
-		rec, valid := instance.ReadRecord()
+	for index := range actualSinstances {
+		rec, valid := actualSinstances[index].ReadRecord()
 		beginningRecords[index+1] = rec
 		beginningValidity[index+1] = valid
 	}

@@ -171,8 +171,8 @@ func compactBySizeTier(lsmLevel int, paths []string) {
 	currentRecords := make([]rec.Record, len(sstableInstances))
 	isReadArray := make([]bool, len(sstableInstances))
 
-	for index, instance := range sstableInstances {
-		currentRecords[index], isReadArray[index] = instance.ReadRecord()
+	for index := range sstableInstances {
+		currentRecords[index], isReadArray[index] = sstableInstances[index].ReadRecord()
 	}
 
 	for !isEverythingFullyRead(isReadArray) {
