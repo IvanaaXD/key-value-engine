@@ -132,7 +132,7 @@ func getWantedPathsForLeveledAlgorithm(lsmLevel int) []string {
 	for _, path := range possibleMatches {
 		sstable := sst.OpenSSTable(path)
 		otherFirst, otherLast := sstable.GetFirstAndLastKeyInSSTable()
-		if otherLast >= firstKey || otherFirst <= lastKey {
+		if otherLast >= firstKey && otherFirst <= lastKey {
 			finalPaths = append(finalPaths, path)
 		}
 	}
