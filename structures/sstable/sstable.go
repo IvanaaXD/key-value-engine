@@ -125,6 +125,9 @@ func RecordToSSTableRecord(inputRecord rec.Record) []byte {
 	compressionDictionary := compress.NewCompressionDict()
 	compressionDictionary.ReadFromFile()
 
+	if inputRecord.Tombstone {
+		inputRecord.Value = make([]byte, 0)
+	}
 	ssRecordBytes := make([]byte, 0)
 	normalRecordBytes := rec.RecToBytes(inputRecord)
 	crcValue := CRC32(normalRecordBytes)
@@ -582,16 +585,16 @@ func (sstable *SSTableInstance) ReadRecord() (rec.Record, bool) {
 	if sstable.isCompressed {
 		dict := compress.NewCompressionDict()
 		dict.ReadFromFile()
-		keyBytes = make([]byte, keyLengthActual)
-		file.Read(keyBytes)
-		key, _ = dict.GetKey(binary.LittleEndian.Uint64(keyBytes))
+		keyBytes = sstable.readValue(file)
+		keyActual, _ := binary.Uvarint(keyBytes)
+		key, _ = dict.GetKey(keyActual)
 
 	} else {
 		keyBytes = make([]byte, keyLengthActual)
 		file.Read(keyBytes)
 		key = string(keyBytes)
+		sstable.currentOffset += int64(len(keyBytes))
 	}
-	sstable.currentOffset += int64(len(keyBytes))
 
 	if !tombstoneActual {
 		value = make([]byte, valueLengthActual)
