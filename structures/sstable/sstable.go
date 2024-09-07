@@ -188,6 +188,7 @@ func RecordToSSTableRecord(inputRecord rec.Record) []byte {
 // Pomocna funkcija proverava da li se dati kljuc nalazi u bloomfilteru od sstabele.
 // Vraca true ako se mozda nalazi. Vraca false ako se sigurno ne nalazi
 func (sstable *SSTableInstance) checkBloomfilter(key string) bool {
+	config.Init()
 	var bfBytes []byte
 	if !sstable.isSingleFile {
 		bfFile, err := os.Open(sstable.filename + "/bloomfilter.bin")
@@ -805,7 +806,8 @@ func (sstable *SSTableCreator) CreateSummary() {
 				break
 			}
 
-			if isFirstOrLast || sstable.currentSummaryNumber == config.DEGREE_OF_DILUTION-1 {
+			if isFirstOrLast || sstable.currentSummaryNumber == uint32(config.GlobalConfig.DegreeOfDilution)-1 {
+				isFirstOrLast = false
 				finalKeyBytes := []byte(indexKey)
 				keyLength := uint64(len(indexKey))
 
@@ -882,7 +884,8 @@ func (sstable *SSTableCreator) CreateSummary() {
 				break
 			}
 
-			if isFirstOrLast || sstable.currentSummaryNumber == config.DEGREE_OF_DILUTION-1 {
+			if isFirstOrLast || sstable.currentSummaryNumber == uint32(config.GlobalConfig.DegreeOfDilution)-1 {
+				isFirstOrLast = false
 				finalKeyBytes := []byte(indexKey)
 				keyLength := uint64(len(indexKey))
 
@@ -965,7 +968,7 @@ func (sstable *SSTableCreator) CreateIndex() {
 				break
 			}
 
-			if isFirstOrLast || sstable.currentIndexNumber == config.DEGREE_OF_DILUTION-1 {
+			if isFirstOrLast || sstable.currentIndexNumber == uint32(config.GlobalConfig.DegreeOfDilution)-1 {
 				isFirstOrLast = false
 				finalKey := record.Key
 
@@ -1046,7 +1049,7 @@ func (sstable *SSTableCreator) CreateIndex() {
 				break
 			}
 
-			if isFirstOrLast || sstable.currentIndexNumber == config.DEGREE_OF_DILUTION-1 {
+			if isFirstOrLast || sstable.currentIndexNumber == uint32(config.GlobalConfig.DegreeOfDilution)-1 {
 				isFirstOrLast = false
 				finalKey := record.Key
 
