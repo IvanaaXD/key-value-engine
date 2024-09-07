@@ -14,6 +14,7 @@ import (
 	count_min_sketch "github.com/IvanaaXD/NASP/structures/count-min-sketch"
 	hyper_log_log "github.com/IvanaaXD/NASP/structures/hyper-log-log"
 	"github.com/IvanaaXD/NASP/structures/iterators"
+	lsm_tree "github.com/IvanaaXD/NASP/structures/lsm-tree"
 	"github.com/IvanaaXD/NASP/structures/memtable"
 	"github.com/IvanaaXD/NASP/structures/merkletree"
 	"github.com/IvanaaXD/NASP/structures/record"
@@ -239,30 +240,36 @@ func TestFolder(t *testing.T) {
 	}
 }
 
+func TestGet(t *testing.T) {
+	rec, ok := sstable.SSTableGet("Bravo")
+	fmt.Println(rec.Key, rec.Value, rec.Timestamp, rec.Tombstone, ok)
+}
+
 func TestCompression(t *testing.T) {
 	usedRecords := make([]record.Record, 0)
-	for i := 0; i < 26; i++ {
-		usedRecords = append(usedRecords, record.Record{Key: RecordKeys[i], Value: []byte(fmt.Sprintf("value%d", i)), Timestamp: 1000, Tombstone: true})
+	for i := 1; i < 26; i++ {
+		usedRecords = append(usedRecords, record.Record{Key: RecordKeys[i], Value: []byte(fmt.Sprintf("value%d", i)), Timestamp: 9000, Tombstone: true})
 	}
 	sstable.CreateNewSSTable(usedRecords)
-	instance := sstable.OpenSSTable("0001sstable0001.bin")
-	for {
-		rec, ok := instance.ReadRecord()
-		if !ok {
-			break
-		}
-		fmt.Println(rec.Key, rec.Value, rec.Timestamp, rec.Tombstone)
-	}
+	// instance := sstable.OpenSSTable("0001sstable0001.bin")
+	// for {
+	// 	rec, ok := instance.ReadRecord()
+	// 	if !ok {
+	// 		break
+	// 	}
+	// 	fmt.Println(rec.Key, rec.Value, rec.Timestamp, rec.Tombstone)
+	// }
 }
 
 func TestLsm(t *testing.T) {
-	inst := sstable.OpenSSTable("0002sstable0001.bin")
+	lsm_tree.InitializeLSMCheck()
+	inst := sstable.OpenSSTable("0003sstable0002.bin")
 	for {
 		rec, ok := inst.ReadRecord()
 		if !ok {
 			break
 		}
-		fmt.Println(rec.Key, rec.Timestamp, rec.Tombstone)
+		fmt.Println(rec.Key, rec.Value, rec.Timestamp, rec.Tombstone)
 	}
 }
 

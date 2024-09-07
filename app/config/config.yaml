@@ -14,7 +14,7 @@ valueSizeSize: 8
 crcStart: 0 
 lsmMaxTables: 5 #korisnik
 lsmMaxLevels: 4 #korisnik
-compactionAlgorithm: leveled # korisnik
+compactionAlgorithm: sizeTiered # korisnik
 timestampStart: 4 
 tombstoneStart: 12 
 keySizeStart: 13 
