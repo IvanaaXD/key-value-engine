@@ -1,28 +1,25 @@
 cacheCapacity: 100 # korisnik
-memtableSize: 2 # korisnik
+memtableSize: 10 # korisnik
 memtableNum: 2 # korisnik
 structureType: hashmap # korisnik
 tokenNumber: 1000 # korisnik
 tokenRefreshTime: 2 # korisnik
-maxEntrySize: 1024
 segmentSize: 65536 # korisnik
-crcSize: 4 # korisnik
-timestampSize: 8 # korisnik
+crcSize: 4 
+timestampSize: 8 
 compression: no # korisnik
-tombstoneSize: 1 # korisnik
-keySizeSize: 8 # korisnik
-valueSizeSize: 8 # korisnik
-crcStart: 0 # korisnik
-maxLevels: 4 # korisnik
-lsmMaxTables: 2 #korisnik
+tombstoneSize: 1 
+keySizeSize: 8 
+valueSizeSize: 8 
+crcStart: 0 
+lsmMaxTables: 5 #korisnik
 lsmMaxLevels: 4 #korisnik
-scalingFactor: 2
-compactionAlgorithm: sizeTiered # korisnik
-timestampStart: 4 # korisnik
-tombstoneStart: 12 # korisnik
-keySizeStart: 13 # korisnik
-ValueSizeStart: 21 # korisnik
-keyStart: 29 # korisnik
+compactionAlgorithm: leveled # korisnik
+timestampStart: 4 
+tombstoneStart: 12 
+keySizeStart: 13 
+ValueSizeStart: 21 
+keyStart: 29 
 degreeOfDilution: 5 # korisnik
 sstFiles: one # korisnik
 lsmLeveledComp: 4 # korisnik

@@ -1047,7 +1047,7 @@ func (sstable *SSTableCreator) CreateMerkle() {
 			break
 		}
 		fn.Write(rec.RecToBytes(record))
-		hashValues = append(hashValues, binary.BigEndian.Uint64(fn.Sum(nil)))
+		hashValues = append(hashValues, binary.LittleEndian.Uint64(fn.Sum(nil)))
 		fn.Reset()
 	}
 

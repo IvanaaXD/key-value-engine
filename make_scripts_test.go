@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"math/rand"
 	"testing"
 	"time"
@@ -8,6 +9,9 @@ import (
 	"github.com/IvanaaXD/NASP/app/config"
 	"github.com/IvanaaXD/NASP/inicialize"
 	"github.com/IvanaaXD/NASP/io"
+	"github.com/IvanaaXD/NASP/structures/iterators"
+	"github.com/IvanaaXD/NASP/structures/memtable"
+	"github.com/IvanaaXD/NASP/structures/sstable"
 )
 
 // Duzina kljuca i vrednosti
@@ -39,6 +43,35 @@ func TestInsert100(t *testing.T) {
 		if !err {
 			t.Error(err)
 		}
+	}
+}
+
+func TestOpen(t *testing.T) {
+	// inst := sstable.OpenSSTable("0001sstable0005.bin")
+	// for {
+	// 	rec, ok := inst.ReadRecord()
+	// 	if !ok {
+	// 		break
+	// 	}
+	// 	fmt.Println(rec.Key)
+	// }
+	minst := make([]*memtable.Memtable, 0)
+	iter := iterators.MakeRangeIterator(minst, "a", "c")
+	rec, ok := iter.GetNext()
+	for ok {
+		fmt.Println(rec.Key, string(rec.Value), rec.Timestamp, rec.Tombstone)
+		rec, ok = iter.GetNext()
+	}
+}
+
+func TestLsm(t *testing.T) {
+	inst := sstable.OpenSSTable("0002sstable0001.bin")
+	for {
+		rec, ok := inst.ReadRecord()
+		if !ok {
+			break
+		}
+		fmt.Println(rec.Key, rec.Timestamp, rec.Tombstone)
 	}
 }
 

@@ -38,14 +38,12 @@ const (
 	MAX_ENTRY_SIZE             = 1024
 	COMPRESSION_DICT_FILE_PATH = "resources/compression_dict.dat"
 	WAL_PATH                   = "resources/wal_0001.log"
-	SCALING_FACTOR             = 2
 	COMPACTION_ALGORITHM       = "sizeTiered"
 	SEGMENT_SIZE               = 256
 	DEGREE_OF_DILUTION         = 5      // stepen proredjenosti
 	SST_FILES                  = "many" // one or many
 	SSTABLE_SIZE               = 20
 	COMPRESSION                = "no" // yes or no
-	PREFIX                     = "data/usertables"
 	LSM_MAX_LEVELS             = 4
 	LSM_MAX_TABLES             = 4
 
@@ -73,7 +71,6 @@ type Config struct {
 	TokenNumber         uint16  `yaml:"tokenNumber"`
 	TokenRefreshTime    uint16  `yaml:"tokenRefreshTime"`
 	WalPath             string  `yaml:"walPath"`
-	MaxEntrySize        int     `yaml:"maxEntrySize"`
 	CrcSize             int     `yaml:"crcSize"`
 	TimestampSize       int     `yaml:"timestampSize"`
 	TombstoneSize       int     `yaml:"tombstoneSize"`
@@ -81,14 +78,12 @@ type Config struct {
 	ValueSizeSize       int     `yaml:"valueSizeSize"`
 	CrcStart            int     `yaml:"crcStart"`
 	BTreeOrder          int     `yaml:"bTreeOrder"`
-	ScalingFactor       int     `yaml:"scalingFactor"`
 	CompactionAlgorithm string  `yaml:"compactionAlgorithm"`
 	Condition           string  `yaml:"condition"`
 	SegmentSize         int     `yaml:"segmentSize"`
 	DegreeOfDilution    int     `yaml:"degreeOfDilution"`
 	SSTFiles            string  `yaml:"sstFiles"`
 	SSTableSize         uint64  `yaml:"sstableSize"`
-	Prefix              string  `yaml:"prefix"`
 	TimestampStart      int     `yaml:"timestampStart"`
 	TombstoneStart      int     `yaml:"tombstoneStart"`
 	KeySizeStart        int     `yaml:"keySizeStart"`
@@ -122,19 +117,16 @@ func NewConfig(filename string) *Config {
 		config.TokenNumber = TOKEN_NUMBER
 		config.TokenRefreshTime = TOKEN_REFRESH_TIME
 		config.WalPath = WAL_PATH
-		config.MaxEntrySize = MAX_ENTRY_SIZE
 		config.TimestampSize = TIMESTAMP_SIZE
 		config.TombstoneSize = TOMBSTONE_SIZE
 		config.KeySizeSize = KEY_SIZE_SIZE
 		config.ValueSizeSize = VALUE_SIZE_SIZE
 		config.BTreeOrder = B_TREE_ORDER
 		config.SegmentSize = SEGMENT_SIZE
-		config.ScalingFactor = SCALING_FACTOR
 		config.CompactionAlgorithm = COMPACTION_ALGORITHM
 		config.DegreeOfDilution = DEGREE_OF_DILUTION
 		config.SSTFiles = SST_FILES
 		config.SSTableSize = SSTABLE_SIZE
-		config.Prefix = PREFIX
 		config.TimestampStart = TIMESTAMP_START
 		config.TombstoneStart = TOMBSTONE_START
 		config.KeySizeStart = KEY_SIZE_START
@@ -164,15 +156,12 @@ func NewConfig(filename string) *Config {
 		config.CmsDelta = CMS_DELTA
 		config.CmsEpsilon = CMS_EPSILON
 		config.WalPath = WAL_PATH
-		config.MaxEntrySize = MAX_ENTRY_SIZE
 		config.TimestampSize = TIMESTAMP_SIZE
 		config.TombstoneSize = TOMBSTONE_SIZE
 		config.KeySizeSize = KEY_SIZE_SIZE
 		config.ValueSizeSize = VALUE_SIZE_SIZE
 		config.BTreeOrder = B_TREE_ORDER
-		config.ScalingFactor = SCALING_FACTOR
 		config.SSTableSize = SSTABLE_SIZE
-		config.Prefix = PREFIX
 		config.Compression = COMPRESSION
 		config.TimestampStart = TIMESTAMP_START
 		config.TombstoneStart = TOMBSTONE_START

@@ -46,7 +46,7 @@ func MakeMerkleTree(records []rec.Record) MerkleTree {
 	index := 0
 	for _, record := range records {
 		fn.Write(rec.RecToBytes(record))
-		leafNodes[index] = &merkleTreeNode{hashValue: binary.BigEndian.Uint64(fn.Sum(nil)), leftChild: nil, rightChild: nil}
+		leafNodes[index] = &merkleTreeNode{hashValue: binary.LittleEndian.Uint64(fn.Sum(nil)), leftChild: nil, rightChild: nil}
 		fn.Reset()
 		index += 1
 	}
@@ -126,7 +126,7 @@ func MakeMerkleTreeFromHashedValues(values []uint64) MerkleTree {
 func leafNodeSerialization(currentNode merkleTreeNode, serializationUtil *serializationUtil) {
 	if currentNode.leftChild == nil {
 		nodeBytes := make([]byte, 8)
-		binary.BigEndian.PutUint64(nodeBytes, uint64(currentNode.hashValue))
+		binary.LittleEndian.PutUint64(nodeBytes, uint64(currentNode.hashValue))
 		serializationUtil.bytes = append(serializationUtil.bytes, nodeBytes...)
 	} else {
 		leafNodeSerialization(*currentNode.leftChild, serializationUtil)
@@ -144,7 +144,7 @@ func Deserialize(treeBytes []byte) MerkleTree {
 	totalElements := len(treeBytes) / 8
 	leafNodes := make([]*merkleTreeNode, totalElements)
 	for index := range leafNodes {
-		leafNodes[index] = &merkleTreeNode{hashValue: binary.BigEndian.Uint64(treeBytes[index*8 : index*8+8]), leftChild: nil, rightChild: nil}
+		leafNodes[index] = &merkleTreeNode{hashValue: binary.LittleEndian.Uint64(treeBytes[index*8 : index*8+8]), leftChild: nil, rightChild: nil}
 	}
 
 	// Prelazak na sledeci nivo stabla

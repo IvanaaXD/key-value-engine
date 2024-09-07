@@ -3,6 +3,9 @@ package memtable
 import (
 	"errors"
 	"fmt"
+	"sort"
+	"strings"
+
 	"github.com/IvanaaXD/NASP/app/config"
 	b_tree "github.com/IvanaaXD/NASP/structures/b-tree"
 	hash_map "github.com/IvanaaXD/NASP/structures/hash-map"
@@ -11,8 +14,6 @@ import (
 	"github.com/IvanaaXD/NASP/structures/record"
 	skip_list "github.com/IvanaaXD/NASP/structures/skip-list"
 	"github.com/IvanaaXD/NASP/structures/sstable"
-	"sort"
-	"strings"
 )
 
 type Memtable struct {
@@ -65,27 +66,6 @@ func (m *Memtable) Clear() *Memtable {
 	return m
 }
 
-func byteBool(b bool) byte {
-	if b {
-		return 1
-	}
-	return 0
-}
-
-func (m *Memtable) CountMemSize() int {
-
-	var size int
-
-	for i := 0; i < int(m.maxSize); i++ {
-		recs := m.Structure.GetItems()
-		for _, rec := range recs {
-
-			size += config.GlobalConfig.CrcSize + config.GlobalConfig.TimestampSize + config.GlobalConfig.TombstoneSize + config.GlobalConfig.KeySizeSize + config.GlobalConfig.ValueSizeSize + len([]byte(rec.Key)) + len(rec.Value)
-		}
-	}
-	return size
-}
-
 // flush to disk aka sstable
 
 func (m *Memtable) Flush() error {
@@ -133,7 +113,7 @@ func (m *Memtable) Write(rec record.Record) (bool, error) {
 
 // deleting records from memtable
 
-func (m *Memtable) Delete(rec record.Record) bool {
+/*func (m *Memtable) Delete(rec record.Record) bool {
 
 	ok := m.Structure.Delete(rec)
 
@@ -147,7 +127,7 @@ func (m *Memtable) Delete(rec record.Record) bool {
 	}
 
 	return ok
-}
+} */
 
 // reading from memtable
 

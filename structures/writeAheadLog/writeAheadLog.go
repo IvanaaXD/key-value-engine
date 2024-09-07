@@ -190,6 +190,7 @@ func (wal *WriteAheadLog) WriteRecord(inputRecord record.Record, memtableIndex i
 
 // Funkcija koja brise serializovane zapise iz WAL-a. Potrebno je proslediti indeks memtabele koja se flushovala
 func (wal *WriteAheadLog) DeleteSerializedRecords(memtableIndex int) {
+	config.Init()
 	allFilesBeforeDeletion, err := os.ReadDir(walFolderName)
 	if err != nil {
 		log.Panic(err)
@@ -234,7 +235,7 @@ func (wal *WriteAheadLog) DeleteSerializedRecords(memtableIndex int) {
 
 	wal.Filename = walFolderName + allFilesAfterDeletion[len(allFilesAfterDeletion)-1].Name()
 	if !strings.Contains(wal.Filename, "wal_") {
-		wal.Filename = walFolderName + "wal_0001.log"
+		wal.Filename = config.GlobalConfig.WalPath
 		os.Create(wal.Filename)
 	}
 

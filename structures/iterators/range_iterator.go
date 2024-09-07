@@ -6,6 +6,7 @@ import (
 	"slices"
 	"sort"
 
+	"github.com/IvanaaXD/NASP/app/config"
 	"github.com/IvanaaXD/NASP/structures/memtable"
 	"github.com/IvanaaXD/NASP/structures/record"
 	"github.com/IvanaaXD/NASP/structures/sstable"
@@ -195,5 +196,37 @@ func MakeRangeIterator(minstances []*memtable.Memtable, begin, end string) *Rang
 // Vraca record i true ako postoji; vraca prazan record i false ako ne postoji
 func (iter *RangeIterator) GetNext() (record.Record, bool) {
 	iter.resolveRepeatingRecords()
-	return iter.findLexicallySmallestRecord()
+	rec, ok := iter.findLexicallySmallestRecord()
+	if isReservedKey(rec.Key) || rec.Tombstone {
+		return iter.GetNext()
+	}
+	return rec, ok
+}
+
+func isReservedKey(key string) bool {
+	config.Init()
+	// specialPrefixes := []string{
+	// 	config.BF_PREFIX,
+	// 	config.CMS_PREFIX,
+	// 	config.HLL_PREFIX,
+	// 	config.SH_PREFIX,
+	// }
+
+	// for _, spec := range specialPrefixes {
+	// 	if strings.HasPrefix(key, spec) {
+	// 		return true
+	// 	}
+	// }
+
+	specialKeys := []string{
+		config.COMPRESSION_DICT,
+		config.RATE_LIMIT,
+	}
+
+	for _, spec := range specialKeys {
+		if key == spec {
+			return true
+		}
+	}
+	return false
 }

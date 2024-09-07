@@ -195,5 +195,9 @@ func MakePrefixIterator(minstances []*memtable.Memtable, prefix string) *PrefixI
 // Vraca record i true ako postoji; vraca prazan record i false ako ne postoji
 func (iter *PrefixIterator) GetNext() (record.Record, bool) {
 	iter.resolveRepeatingRecords()
-	return iter.findLexicallySmallestRecord()
+	rec, ok := iter.findLexicallySmallestRecord()
+	if isReservedKey(rec.Key) || rec.Tombstone {
+		return iter.GetNext()
+	}
+	return rec, ok
 }
