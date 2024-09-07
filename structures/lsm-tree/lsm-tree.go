@@ -58,7 +58,7 @@ func isLeveledCompactionConditionFulfilled(lsmLevel int) bool {
 		requiredSSTableCount = requiredSSTableCount * config.GlobalConfig.LsmLeveledComp
 	}
 
-	return len(extractSSTablePathsOfLSMLevel(lsmLevel)) == int(requiredSSTableCount)
+	return len(extractSSTablePathsOfLSMLevel(lsmLevel)) >= int(requiredSSTableCount)
 }
 
 func findLexicallySmallestRecord(records []rec.Record, isRead []bool) int {
@@ -210,7 +210,13 @@ func compactBySizeTier(lsmLevel int, paths []string) {
 	newCreator.CreateMetadata()
 
 	for _, path := range paths {
-		os.Remove(sst.SSTableFolderPath + "/" + path)
+		err := os.Remove(sst.SSTableFolderPath + "/" + path)
+		if err != nil {
+			err2 := os.RemoveAll(sst.SSTableFolderPath + "/" + path)
+			if err2 != nil {
+				panic(err)
+			}
+		}
 	}
 
 }
@@ -340,7 +346,13 @@ func fixIndexAndDeleteUsedSSTables(lsmLevel int, usedPaths []string) {
 
 	// delete usedPaths BUT ONLY AFTER THE NAMES THEMSELVES HAVE BEEN UPDATED ACCORDINGLY
 	for _, path := range usedPaths {
-		os.Remove(sst.SSTableFolderPath + "/" + path)
+		err := os.Remove(sst.SSTableFolderPath + "/" + path)
+		if err != nil {
+			err2 := os.RemoveAll(sst.SSTableFolderPath + "/" + path)
+			if err2 != nil {
+				panic(err)
+			}
+		}
 	}
 
 	newPaths := make([]string, 0)
