@@ -766,6 +766,7 @@ func (sstable *SSTableCreator) CreateSummary() {
 		sstable.Instance.summaryBeginOffset, _ = file.Seek(0, 2)
 		file.Close()
 
+		var justBeenAdded bool = false
 		var previousKey string
 		sstable.Instance.currentOffset = 0
 		sstable.currentIndexOffset = 0
@@ -777,6 +778,9 @@ func (sstable *SSTableCreator) CreateSummary() {
 			offsetAtEnd := sstable.Instance.currentOffset
 
 			if !isRead {
+				if justBeenAdded {
+					break
+				}
 				finalKey := previousKey
 
 				keyLength := uint64(len(finalKey))
@@ -824,8 +828,10 @@ func (sstable *SSTableCreator) CreateSummary() {
 				file.Write(summaryBytes)
 				file.Close()
 				sstable.currentSummaryNumber = 0
+				justBeenAdded = true
 			} else {
 				sstable.currentSummaryNumber += 1
+				justBeenAdded = false
 			}
 
 			sstable.currentIndexOffset += uint64(offsetAtEnd) - uint64(offsetAtBeginning)
@@ -840,6 +846,7 @@ func (sstable *SSTableCreator) CreateSummary() {
 
 		sstable.Instance.summaryBeginOffset = 0
 
+		var justBeenAdded bool = false
 		var previousKey string
 		sstable.Instance.currentOffset = 0
 		sstable.currentIndexOffset = 0
@@ -852,6 +859,9 @@ func (sstable *SSTableCreator) CreateSummary() {
 			offsetAtEnd := sstable.Instance.currentOffset
 
 			if !isRead {
+				if justBeenAdded {
+					break
+				}
 				finalKey := previousKey
 
 				keyLength := uint64(len(finalKey))
@@ -890,8 +900,10 @@ func (sstable *SSTableCreator) CreateSummary() {
 				summaryFile.Write(summaryBytes)
 
 				sstable.currentSummaryNumber = 0
+				justBeenAdded = true
 			} else {
 				sstable.currentSummaryNumber += 1
+				justBeenAdded = false
 			}
 
 			sstable.currentIndexOffset += uint64(offsetAtEnd) - uint64(offsetAtBeginning)
@@ -917,7 +929,7 @@ func (sstable *SSTableCreator) CreateIndex() {
 		sstable.currentIndexNumber = 0
 		recordsToRead := true
 		isFirstOrLast := true
-
+		var justBeenAdded bool = false
 		var previousRecord rec.Record
 		for recordsToRead {
 
@@ -926,6 +938,9 @@ func (sstable *SSTableCreator) CreateIndex() {
 			offsetAtEnd := sstable.Instance.currentOffset
 
 			if !isRead {
+				if justBeenAdded {
+					break
+				}
 				finalKey := previousRecord.Key
 
 				keyLength := uint64(len(finalKey))
@@ -975,8 +990,10 @@ func (sstable *SSTableCreator) CreateIndex() {
 				file.Close()
 
 				sstable.currentIndexNumber = 0
+				justBeenAdded = true
 			} else {
 				sstable.currentIndexNumber += 1
+				justBeenAdded = false
 			}
 
 			sstable.currentDataOffset += uint64(offsetAtEnd) - uint64(offsetAtBeginning)
@@ -997,6 +1014,7 @@ func (sstable *SSTableCreator) CreateIndex() {
 		recordsToRead := true
 		isFirstOrLast := true
 
+		var justBeenAdded bool = false
 		var previousRecord rec.Record
 		for recordsToRead {
 
@@ -1005,6 +1023,9 @@ func (sstable *SSTableCreator) CreateIndex() {
 			offsetAtEnd := sstable.Instance.currentOffset
 
 			if !isRead {
+				if justBeenAdded {
+					break
+				}
 				finalKey := previousRecord.Key
 
 				keyLength := uint64(len(finalKey))
@@ -1044,8 +1065,10 @@ func (sstable *SSTableCreator) CreateIndex() {
 				indexFile.Write(indexBytes)
 
 				sstable.currentIndexNumber = 0
+				justBeenAdded = true
 			} else {
 				sstable.currentIndexNumber += 1
+				justBeenAdded = false
 			}
 
 			sstable.currentDataOffset += uint64(offsetAtEnd) - uint64(offsetAtBeginning)
