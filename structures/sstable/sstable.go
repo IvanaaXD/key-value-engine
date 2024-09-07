@@ -396,6 +396,22 @@ func MakeNewSSTableInstance(lsmLevel int) *SSTableInstance {
 			bloomfilterBeginOffset: metaBloomfilterBegin}
 	} else { // SSTFiles == "many"
 		os.Mkdir(newSSTablePath, 0777)
+
+		f, _ := os.Create(newSSTablePath + "/summary.bin")
+		f.Close()
+
+		f, _ = os.Create(newSSTablePath + "/index.bin")
+		f.Close()
+
+		f, _ = os.Create(newSSTablePath + "/meta.bin")
+		f.Close()
+
+		f, _ = os.Create(newSSTablePath + "/data.bin")
+		f.Close()
+
+		f, _ = os.Create(newSSTablePath + "/merkle.bin")
+		f.Close()
+
 		return &SSTableInstance{filename: newSSTablePath, currentOffset: 0, dataBeginOffset: 0, isSingleFile: false, isCompressed: compression,
 			bloomfilterBeginOffset: 0, indexBeginOffset: 0, summaryBeginOffset: 0, merkleBeginOffset: 0}
 	}
@@ -1488,4 +1504,66 @@ func replaceRecord(records []*rec.Record, newRecord *rec.Record) {
 			return
 		}
 	}
+}
+
+// Funkcija koja proverava da li se trenutno stanje recorda poklapa sa merkle stablom koje je napravljeno
+// pri kreaciji sstabele. Vraca true ako da, vraca false ako ne
+func (sstable *SSTableInstance) CheckMerkleValidity() bool {
+	var file *os.File
+	var err error
+	if sstable.isSingleFile {
+		file, err = os.OpenFile(sstable.filename, os.O_RDONLY, 0777)
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		file, err = os.OpenFile(sstable.filename+"/merkle.bin", os.O_RDONLY, 0777)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	curr, _ := file.Seek(sstable.merkleBeginOffset, 0)
+	filestat, _ := file.Stat()
+	bytesToRead := filestat.Size() - curr
+	merkleBytes := make([]byte, bytesToRead)
+	file.Read(merkleBytes)
+	file.Close()
+
+	expectedMerkle := merk.Deserialize(merkleBytes)
+	actualMerkle := sstable.CreateMerkleHelper()
+
+	expectedMerkleHashes := expectedMerkle.GetNodes()
+	actualMerkleHashes := actualMerkle.GetNodes()
+
+	if len(expectedMerkleHashes) != len(actualMerkleHashes) {
+		return false
+	}
+
+	for index := range expectedMerkleHashes {
+		if expectedMerkleHashes[index] != actualMerkleHashes[index] {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (sstable *SSTableInstance) CreateMerkleHelper() merk.MerkleTree {
+	hashValues := make([]uint64, 0)
+	fn := md5.New()
+	sstable.currentOffset = 0
+
+	for {
+		record, valid := sstable.ReadRecord()
+		if !valid {
+			break
+		}
+		fn.Write(rec.RecToBytes(record))
+		hashValues = append(hashValues, binary.LittleEndian.Uint64(fn.Sum(nil)))
+		fn.Reset()
+	}
+
+	merkleTree := merk.MakeMerkleTreeFromHashedValues(hashValues)
+	return merkleTree
 }

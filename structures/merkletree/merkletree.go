@@ -11,6 +11,8 @@ import (
 
 const emptyNodeHash uint64 = 0
 
+var returningHashValues []uint64
+
 type MerkleTree struct {
 	Root merkleTreeNode
 }
@@ -166,4 +168,20 @@ func Deserialize(treeBytes []byte) MerkleTree {
 	}
 
 	return MerkleTree{Root: *oldNodes[0]}
+}
+
+func (mt *MerkleTree) GetNodes() []uint64 {
+	returningHashValues = make([]uint64, 0)
+	travel(mt.Root)
+	return returningHashValues
+}
+
+func travel(mn merkleTreeNode) {
+	if mn.leftChild != nil {
+		travel(*mn.leftChild)
+	}
+	returningHashValues = append(returningHashValues, mn.hashValue)
+	if mn.rightChild != nil {
+		travel(*mn.rightChild)
+	}
 }

@@ -11,6 +11,8 @@ import (
 	"github.com/IvanaaXD/NASP/io"
 	"github.com/IvanaaXD/NASP/structures/iterators"
 	"github.com/IvanaaXD/NASP/structures/memtable"
+	"github.com/IvanaaXD/NASP/structures/merkletree"
+	"github.com/IvanaaXD/NASP/structures/record"
 	"github.com/IvanaaXD/NASP/structures/sstable"
 )
 
@@ -26,6 +28,12 @@ var seededRand *rand.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 // charset za generisanje random kljuceva i vrednosti
 const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+var RecordKeys = [...]string{
+	"Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot", "Golf", "Hotel", "India", "Juliet",
+	"Kilo", "Lima", "Mike", "November", "Oscar", "Papa", "Quebec", "Romeo", "Sierra", "Tango",
+	"Uniform", "Victor", "Whiskey", "Xray", "Yankee", "Zulu",
+}
 
 func TestInsert100(t *testing.T) {
 
@@ -80,6 +88,32 @@ func TestOpen(t *testing.T) {
 	for ok {
 		fmt.Println(rec.Key, string(rec.Value), rec.Timestamp, rec.Tombstone)
 		rec, ok = iter.GetNext()
+	}
+}
+
+func TestMerkleSSTable(t *testing.T) {
+	usedRecords := make([]record.Record, 0)
+	for i := 0; i < 26; i++ {
+		usedRecords = append(usedRecords, record.Record{Key: RecordKeys[i], Value: []byte(RecordKeys[i]), Timestamp: 100, Tombstone: false})
+	}
+
+	expectedMt := merkletree.MakeMerkleTree(usedRecords)
+
+	sstable.CreateNewSSTable(usedRecords)
+	usedSST := sstable.OpenSSTable("0001sstable0001")
+	actualMt := usedSST.CreateMerkleHelper()
+
+	expectedMerkleHashes := expectedMt.GetNodes()
+	actualMerkleHashes := actualMt.GetNodes()
+
+	if len(expectedMerkleHashes) != len(actualMerkleHashes) {
+		t.Error("Bad len")
+	}
+
+	for index := range expectedMerkleHashes {
+		if expectedMerkleHashes[index] != actualMerkleHashes[index] {
+			t.Error("Bad hash")
+		}
 	}
 }
 
