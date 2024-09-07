@@ -236,7 +236,8 @@ func (wal *WriteAheadLog) DeleteSerializedRecords(memtableIndex int) {
 	wal.Filename = walFolderName + allFilesAfterDeletion[len(allFilesAfterDeletion)-1].Name()
 	if !strings.Contains(wal.Filename, "wal_") {
 		wal.Filename = config.GlobalConfig.WalPath
-		os.Create(wal.Filename)
+		f, _ := os.Create(wal.Filename)
+		f.Close()
 	}
 
 	lastFileInfo, err := os.Stat(wal.Filename)

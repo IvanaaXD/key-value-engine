@@ -46,6 +46,25 @@ func TestInsert100(t *testing.T) {
 	}
 }
 
+func TestInsertSomething(t *testing.T) {
+
+	config.Init()
+	inicialize.Init()
+
+	config.GlobalConfig.Compression = "no"
+	config.GlobalConfig.MemtableSize = 1000
+	config.GlobalConfig.TokenNumber = 1000
+
+	keys := generateKey(100)
+
+	for i := 0; i < 100; i++ {
+		err := io.Put(keys[randomIdx(100)], generateValue(), time.Now().UnixNano())
+		if !err {
+			t.Error(err)
+		}
+	}
+}
+
 func TestOpen(t *testing.T) {
 	// inst := sstable.OpenSSTable("0001sstable0005.bin")
 	// for {
