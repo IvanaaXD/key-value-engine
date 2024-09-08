@@ -5,7 +5,6 @@ import (
 	"github.com/IvanaaXD/NASP/structures/iterators"
 	"github.com/IvanaaXD/NASP/structures/record"
 	"github.com/IvanaaXD/NASP/structures/sstable"
-	"sort"
 )
 
 func Get(key string) (record.Record, bool) {
@@ -29,38 +28,44 @@ func Get(key string) (record.Record, bool) {
 	return record.Record{}, false
 }
 
-func PrefixScan(key string) []record.Record {
+func PrefixScan(key string, pageNum, pageSize int) []record.Record {
 
-	memtableRecords := inicialize.Memtables.PrefixScan(key)
-	sstableRecords := sstable.PrefixScan(key, memtableRecords)
+	iter := iterators.MakePrefixIterator(inicialize.Memtables.Tables, key)
 
-	sort.Slice(sstableRecords, func(i, j int) bool {
-		return sstableRecords[i].Key < sstableRecords[j].Key
-	})
-
-	result := make([]record.Record, len(sstableRecords))
-	for i, rec := range sstableRecords {
-		result[i] = *rec
+	var records = make([]record.Record, 0)
+	for i := 0; i < pageSize*(pageNum-1); i++ {
+		iter.GetNext()
 	}
 
-	return result
+	for i := 0; i < pageSize; i++ {
+		rec, ok := iter.GetNext()
+		if !ok {
+			break
+		}
+		records = append(records, rec)
+	}
+
+	return records
 }
 
-func RangeScan(start, end string) []record.Record {
+func RangeScan(start, end string, pageNum, pageSize int) []record.Record {
 
-	memtableRecords := inicialize.Memtables.RangeScan(start, end)
-	sstableRecords := sstable.RangeScan(start, end, memtableRecords)
+	iter := iterators.MakeRangeIterator(inicialize.Memtables.Tables, start, end)
 
-	sort.Slice(sstableRecords, func(i, j int) bool {
-		return sstableRecords[i].Key < sstableRecords[j].Key
-	})
-
-	result := make([]record.Record, len(sstableRecords))
-	for i, rec := range sstableRecords {
-		result[i] = *rec
+	var records = make([]record.Record, 0)
+	for i := 0; i < pageSize*(pageNum-1); i++ {
+		iter.GetNext()
 	}
 
-	return result
+	for i := 0; i < pageSize; i++ {
+		rec, ok := iter.GetNext()
+		if !ok {
+			break
+		}
+		records = append(records, rec)
+	}
+
+	return records
 }
 
 func PrefixIterate(key string) {
