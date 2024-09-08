@@ -1348,6 +1348,8 @@ func (sstable *SSTableInstance) CheckIfContainsRange(start, finish string) bool 
 // Vraca true ako sadrzi recorde sa kljucem koji ima prosledjen prefiks, vraca false ako ne
 func (sstable *SSTableInstance) CheckIfContainsPrefix(prefix string) bool {
 	isPossiblyContained := sstable.checkIfInRange(prefix)
+	fk, lk := sstable.GetFirstAndLastKeyInSSTable()
+	isPossiblyContained = isPossiblyContained || strings.HasPrefix(fk, prefix) || strings.HasPrefix(lk, prefix)
 
 	if isPossiblyContained {
 		//	7) Pozicionirati se na najblizi element u summary

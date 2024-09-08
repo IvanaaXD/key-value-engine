@@ -23,10 +23,10 @@ type PrefixIterator struct {
 func (iter *PrefixIterator) loadNewRecord(indexToLoad int) {
 	if indexToLoad == 0 {
 		// load from memtable record array
+		iter.memtableRecords = iter.memtableRecords[1:]
 		if len(iter.memtableRecords) != 0 {
 			iter.currentRecords[0] = iter.memtableRecords[0]
 			iter.isValid[0] = true
-			iter.memtableRecords = iter.memtableRecords[1:]
 		} else {
 			iter.currentRecords[0] = record.Record{}
 			iter.isValid[0] = false
@@ -133,6 +133,8 @@ func MakePrefixIterator(minstances []*memtable.Memtable, prefix string) *PrefixI
 			if rec.Timestamp > savedRec.Timestamp {
 				recordMap[rec.Key] = rec
 			}
+		} else {
+			recordMap[rec.Key] = rec
 		}
 	}
 	tempMemRecords = make([]record.Record, 0)
@@ -161,7 +163,7 @@ func MakePrefixIterator(minstances []*memtable.Memtable, prefix string) *PrefixI
 
 	tempSinstances := make([]sstable.SSTableInstance, 0)
 	for _, path := range sstablePaths {
-		tempSinstances = append(actualSinstances, sstable.OpenSSTable(path.Name()))
+		tempSinstances = append(tempSinstances, sstable.OpenSSTable(path.Name()))
 	}
 
 	for _, instance := range tempSinstances {
