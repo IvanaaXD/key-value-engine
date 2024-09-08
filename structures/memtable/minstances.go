@@ -3,12 +3,10 @@ package memtable
 import (
 	"errors"
 	"fmt"
-	"os"
-	"time"
-
 	"github.com/IvanaaXD/NASP/app/config"
 	"github.com/IvanaaXD/NASP/structures/record"
 	writeaheadlog "github.com/IvanaaXD/NASP/structures/writeAheadLog"
+	"os"
 )
 
 const NullElementKey string = "NULLELEMENT"
@@ -69,11 +67,10 @@ func CheckWal() bool {
 
 func (mi *Memtables) Recover() error {
 
-	var i = 0
-	currentMemtable := mi.Tables[i]
+	currentMemtable := mi.Tables[mi.Current]
 
 	for {
-		rec := mi.Wal.ReadRecord(i)
+		rec := mi.Wal.ReadRecord(mi.Current)
 
 		recc := record.Record{Key: NullElementKey, Tombstone: true}
 		if rec.Key == recc.Key {
@@ -81,16 +78,15 @@ func (mi *Memtables) Recover() error {
 		}
 
 		if currentMemtable.maxSize == currentMemtable.Structure.GetSize() {
-			i++
-			i = i % mi.MaxTables
-			if i == mi.Last {
+			mi.Current = (mi.Current + 1) % mi.MaxTables
+			if mi.Current == mi.Last {
 				err := mi.Flush()
 				if err != nil {
 					fmt.Println("Error flushing: ", err)
 					return err
 				}
 			}
-			currentMemtable = mi.Tables[i]
+			currentMemtable = mi.Tables[mi.Current]
 		}
 
 		var success bool
@@ -144,7 +140,6 @@ func (mi *Memtables) Flush() error {
 	m := mi.Tables[flushId]
 
 	err := m.Flush()
-	m.Clear()
 	if err != nil {
 		fmt.Println("Error flushing: ", err)
 		return err
@@ -197,6 +192,7 @@ func (mi *Memtables) Delete(key string, timestamp int64) error {
 			mi.Tables[id].Structure.Delete(rec)
 		} else {
 			rec.Tombstone = true
+			rec.Timestamp = timestamp
 
 			err := mi.Write(rec)
 			if err != nil {
@@ -210,7 +206,8 @@ func (mi *Memtables) Delete(key string, timestamp int64) error {
 
 		rec.Tombstone = true
 		rec.Key = key
-		rec.Timestamp = time.Now().UnixNano()
+		rec.Timestamp = timestamp
+
 		err := mi.Write(rec)
 		if err != nil {
 			println("Error writing to file")

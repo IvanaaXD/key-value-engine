@@ -44,7 +44,7 @@ func NewMemtable(strucName string) *Memtable {
 
 // clear memtable
 
-func (m *Memtable) Clear() *Memtable {
+func (m *Memtable) Clear() {
 
 	var structure Structure
 
@@ -60,7 +60,6 @@ func (m *Memtable) Clear() *Memtable {
 	}
 
 	m.Structure = structure
-	return m
 }
 
 // flush to disk aka sstable
@@ -72,6 +71,8 @@ func (m *Memtable) Flush() error {
 	sort.Slice(records, func(i, j int) bool {
 		return records[i].Key < records[j].Key
 	})
+
+	m.Clear()
 
 	sstable.CreateNewSSTable(records)
 	lsm_tree.InitializeLSMCheck()
@@ -91,43 +92,8 @@ func (m *Memtable) Write(rec record.Record) (bool, error) {
 	}
 
 	if m.Structure.GetSize() >= m.maxSize {
-
 		return true, nil
-
-		//switch config.GlobalConfig.StructureType {
-		//
-		//case "skiplist":
-		//	m.structure = skip_list.NewSkipList(config.GlobalConfig.SkipListHeight)
-		//case "btree":
-		//	m.structure = b_tree.NewBTree(config.GlobalConfig.BTreeOrder)
-		//case "hashmap":
-		//	m.structure = hash_map.NewHashMap(uint32(config.GlobalConfig.HashMapSize))
-		//}
 	}
 
 	return false, nil
-}
-
-// deleting records from memtable
-
-/*func (m *Memtable) Delete(rec record.Record) bool {
-
-	ok := m.Structure.Delete(rec)
-
-	if m.Structure.GetSize() >= m.maxSize {
-		err := m.Flush()
-		if err != nil {
-			return false
-		}
-
-		m.Clear()
-	}
-
-	return ok
-} */
-
-// reading from memtable
-
-func (m *Memtable) Read(key string) (record.Record, bool) {
-	return m.Structure.Read(key)
 }
