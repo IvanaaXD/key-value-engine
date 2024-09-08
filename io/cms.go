@@ -3,10 +3,11 @@ package io
 import (
 	"errors"
 	"fmt"
+	"time"
+
 	"github.com/IvanaaXD/NASP/app/config"
 	count_min_sketch "github.com/IvanaaXD/NASP/structures/count-min-sketch"
 	"github.com/IvanaaXD/NASP/structures/record"
-	"time"
 )
 
 func NewCMS(key string, epsilon, delta float64) error {
@@ -69,7 +70,7 @@ func WriteCMS(key string, value []byte) error {
 	return nil
 }
 
-func CMSFrequency(key string) (uint64, bool) {
+func CMSFrequency(key string, value []byte) (uint64, bool) {
 
 	key = config.GlobalConfig.CMSPrefix + key
 
@@ -77,13 +78,13 @@ func CMSFrequency(key string) (uint64, bool) {
 	var exists bool
 
 	rec, exists = Get(key)
-	if !exists {
+	if !exists || rec.Tombstone {
 		return 0, false
 	}
 
 	cms := count_min_sketch.Deserialize(rec.Value)
 
-	found := cms.GetFrequency(rec.Value)
+	found := cms.GetFrequency(value)
 
 	return found, true
 }

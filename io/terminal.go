@@ -3,12 +3,13 @@ package io
 import (
 	"bufio"
 	"fmt"
-	"github.com/IvanaaXD/NASP/app/config"
-	"github.com/IvanaaXD/NASP/structures/iterator"
-	"github.com/IvanaaXD/NASP/structures/tokenBucket"
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/IvanaaXD/NASP/app/config"
+	"github.com/IvanaaXD/NASP/structures/iterator"
+	tokenbucket "github.com/IvanaaXD/NASP/structures/tokenBucket"
 )
 
 func GetInput(isNewWrite bool) (string, []byte) {
@@ -719,8 +720,9 @@ func Menu() error {
 				ok, exists := SHDistance(key1, key2)
 				if !exists {
 					fmt.Println("Distance is none")
+				} else {
+					fmt.Printf("Distance is %d", ok)
 				}
-				fmt.Printf("Distance is %d", ok)
 			}
 
 		case "14": // DELETE SH
@@ -763,13 +765,14 @@ func Menu() error {
 			if !IsTBAvailable() {
 				fmt.Println("Too many requests. Please wait.")
 			} else {
-				key := GetKey()
+				key, value := GetKeyValueBF()
 
-				ok, exists := CMSFrequency(key)
+				ok, exists := CMSFrequency(key, value)
 				if !exists {
-					fmt.Println("Frequency is none")
+					fmt.Println("No countminsketch with the key", key)
+				} else {
+					fmt.Printf("Frequency is %d", ok)
 				}
-				fmt.Printf("Frequency is %d", ok)
 			}
 
 		case "18": // DELETE CMS
@@ -815,9 +818,11 @@ func Menu() error {
 
 				ok, exists := HLLDiscount(key)
 				if !exists {
-					fmt.Println("Discount is none")
+					fmt.Println("No hyperloglog found with the key", key)
+				} else {
+					fmt.Printf("Discount is %d", ok)
 				}
-				fmt.Printf("Discount is %d", ok)
+
 			}
 
 		case "22": // DELETE HLL
