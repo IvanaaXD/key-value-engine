@@ -6,7 +6,7 @@ tokenNumber: 1000 # korisnik
 tokenRefreshTime: 2 # korisnik
 segmentSize: 65536 # korisnik
 crcSize: 4 
-timestampSize: 8 
+timestampSize: 8
 compression: no # korisnik
 tombstoneSize: 1 
 keySizeSize: 8 

@@ -145,12 +145,6 @@ func NewConfig(filename string) *Config {
 		config.LsmLeveledComp = 4
 
 	} else {
-		err = yaml.Unmarshal(yamlFile, &config)
-
-		if err != nil {
-			fmt.Printf("Unmarshal: %v", err)
-		}
-
 		config.BFExpectedElements = BF_EXPECTED_EL
 		config.BFFalsePositiveRate = BF_FALSE_POSITIVE_RATE
 		config.CmsDelta = CMS_DELTA
@@ -175,6 +169,12 @@ func NewConfig(filename string) *Config {
 		config.SHPrefix = SH_PREFIX
 		config.TBPrefix = TB_PREFIX
 		config.MapFileName = MAP_FILE_PATH
+
+		err = yaml.Unmarshal(yamlFile, &config)
+
+		if err != nil {
+			fmt.Printf("Unmarshal: %v", err)
+		}
 	}
 
 	return &config
