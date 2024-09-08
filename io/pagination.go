@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func printPage(record record.Record, pageNum, numOfPages int) int {
+func printPage(record record.Record, pageNum int) int {
 	var next string
 
 	fmt.Printf("\n=========================PAGE %d=========================\n", pageNum)
