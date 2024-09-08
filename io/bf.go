@@ -49,7 +49,7 @@ func WriteBF(key string, value []byte) error {
 	key = config.GlobalConfig.BFPrefix + key
 
 	rec, exists := Get(key)
-	if !exists {
+	if !exists || rec.Tombstone {
 		return errors.New("no bf with given key")
 	}
 
@@ -70,7 +70,7 @@ func BFHasKey(key string, value []byte) bool {
 	key = config.GlobalConfig.BFPrefix + key
 
 	rec, exists := Get(key)
-	if !exists {
+	if !exists || rec.Tombstone {
 		return false
 	}
 

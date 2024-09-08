@@ -76,7 +76,6 @@ type Config struct {
 	TombstoneSize       int     `yaml:"tombstoneSize"`
 	KeySizeSize         int     `yaml:"keySizeSize"`
 	ValueSizeSize       int     `yaml:"valueSizeSize"`
-	CrcStart            int     `yaml:"crcStart"`
 	BTreeOrder          int     `yaml:"bTreeOrder"`
 	CompactionAlgorithm string  `yaml:"compactionAlgorithm"`
 	Condition           string  `yaml:"condition"`

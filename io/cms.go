@@ -53,7 +53,7 @@ func WriteCMS(key string, value []byte) error {
 	var exists bool
 
 	rec, exists = Get(key)
-	if !exists {
+	if !exists || rec.Tombstone {
 		return errors.New("no cms with given key")
 	}
 

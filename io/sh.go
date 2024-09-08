@@ -50,12 +50,12 @@ func SHDistance(key1 string, key2 string) (int, bool) {
 	key2 = config.GlobalConfig.SHPrefix + key2
 
 	rec1, exists := Get(key1)
-	if !exists {
+	if !exists || rec1.Tombstone {
 		return 0, false
 	}
 
 	rec2, exists := Get(key2)
-	if !exists {
+	if !exists || rec2.Tombstone {
 		return 0, false
 	}
 

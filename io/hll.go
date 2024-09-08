@@ -49,7 +49,7 @@ func WriteHLL(key string, value []byte) error {
 	key = config.GlobalConfig.HLLPrefix + key
 
 	rec, exists := Get(key)
-	if !exists {
+	if !exists || rec.Tombstone {
 		return errors.New("no hll with given key")
 	}
 
@@ -70,7 +70,7 @@ func HLLDiscount(key string) (uint64, bool) {
 	key = config.GlobalConfig.HLLPrefix + key
 
 	rec, exists := Get(key)
-	if !exists {
+	if !exists || rec.Tombstone {
 		return 0, false
 	}
 
