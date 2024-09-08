@@ -6,46 +6,6 @@ import (
 	"strings"
 )
 
-func GetRangePage(start, end string, pageNum, pageSize int) {
-
-	var records = RangeScan(start, end)
-
-	startIndex := (pageNum - 1) * pageSize
-	endIndex := startIndex + pageSize
-
-	if endIndex > len(records) {
-		endIndex = len(records) - 1
-	}
-
-	if startIndex >= len(records) {
-		fmt.Println("No records found on this page.")
-		return
-	}
-
-	pageRecords := records[startIndex:endIndex]
-	printRecords(pageRecords)
-}
-
-func GetPrefixPage(prefix string, pageNum, pageSize int) {
-
-	var records = PrefixScan(prefix)
-
-	startIndex := (pageNum - 1) * pageSize
-	endIndex := startIndex + pageSize
-
-	if endIndex > len(records) {
-		endIndex = len(records)
-	}
-
-	if startIndex >= len(records) {
-		fmt.Println("No records found on this page.")
-		return
-	}
-
-	pageRecords := records[startIndex:endIndex]
-	printRecords(pageRecords)
-}
-
 func printPage(record record.Record, pageNum, numOfPages int) int {
 	var next string
 

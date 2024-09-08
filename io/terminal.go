@@ -619,7 +619,7 @@ func Menu() error {
 				fmt.Println("Too many requests. Please wait.")
 			} else {
 				start, end, pageNum, pageSize := RangeScanInput()
-				GetRangePage(start, end, pageNum, pageSize)
+				RangeScan(start, end, pageNum, pageSize)
 			}
 
 		case "5": // PREFIX SCAN
@@ -627,7 +627,7 @@ func Menu() error {
 				fmt.Println("Too many requests. Please wait.")
 			} else {
 				prefix, pageNum, pageSize := PrefixScanInput()
-				GetPrefixPage(prefix, pageNum, pageSize)
+				PrefixScan(prefix, pageNum, pageSize)
 			}
 
 		case "6": // RANGE ITERATOR

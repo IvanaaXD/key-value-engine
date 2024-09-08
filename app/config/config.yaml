@@ -1,6 +1,6 @@
 cacheCapacity: 100 # korisnik
-memtableSize: 2 # korisnik
-memtableNum: 2 # korisnik
+memtableSize: 100 # korisnik
+memtableNum: 10 # korisnik
 structureType: hashmap # korisnik
 tokenNumber: 1000 # korisnik
 tokenRefreshTime: 2 # korisnik
@@ -14,10 +14,10 @@ keySizeSize: 8 # korisnik
 valueSizeSize: 8 # korisnik
 crcStart: 0 # korisnik
 maxLevels: 4 # korisnik
-lsmMaxTables: 2 #korisnik
+lsmMaxTables: 10 #korisnik
 lsmMaxLevels: 4 #korisnik
 scalingFactor: 2
-compactionAlgorithm: sizeTiered # korisnik
+compactionAlgorithm: leveled # korisnik
 timestampStart: 4 # korisnik
 tombstoneStart: 12 # korisnik
 keySizeStart: 13 # korisnik
