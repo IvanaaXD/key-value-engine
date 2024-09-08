@@ -5,15 +5,6 @@ import (
 	"github.com/IvanaaXD/NASP/app/config"
 )
 
-func IsInvalidKey(i Iterator) bool {
-
-	if i != nil && i.Value() != nil && !IsSpecialKey([]byte(i.Value().Key)) {
-		return false
-
-	}
-	return true
-}
-
 func IsSpecialKey(key []byte) bool {
 
 	specialPrefixes := [][]byte{

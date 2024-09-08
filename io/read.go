@@ -71,9 +71,6 @@ func RangeScan(start, end string, pageNum, pageSize int) []record.Record {
 func PrefixIterate(key string) {
 
 	iter := iterators.MakePrefixIterator(inicialize.Memtables.Tables, key)
-
-	var numOfRecords = 1
-	var numOfPages = (1 + numOfRecords - 1) / numOfRecords
 	currentPage := 1
 
 	for {
@@ -83,7 +80,7 @@ func PrefixIterate(key string) {
 			break
 		}
 
-		movePages := printPage(record, currentPage, numOfPages)
+		movePages := printPage(record, currentPage)
 		if movePages == 0 {
 			break
 		} else {
@@ -96,9 +93,6 @@ func PrefixIterate(key string) {
 func RangeIterate(start, end string) {
 
 	iter := iterators.MakeRangeIterator(inicialize.Memtables.Tables, start, end)
-
-	var numOfRecords = 1
-	var numOfPages = (1 + numOfRecords - 1) / numOfRecords
 	currentPage := 1
 
 	for {
@@ -108,7 +102,7 @@ func RangeIterate(start, end string) {
 			break
 		}
 
-		movePages := printPage(record, currentPage, numOfPages)
+		movePages := printPage(record, currentPage)
 		if movePages == 0 {
 			break
 		} else {

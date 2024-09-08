@@ -3,17 +3,14 @@ package memtable
 import (
 	"errors"
 	"fmt"
-	"sort"
-	"strings"
-
 	"github.com/IvanaaXD/NASP/app/config"
 	b_tree "github.com/IvanaaXD/NASP/structures/b-tree"
 	hash_map "github.com/IvanaaXD/NASP/structures/hash-map"
-	"github.com/IvanaaXD/NASP/structures/iterator"
 	lsm_tree "github.com/IvanaaXD/NASP/structures/lsm-tree"
 	"github.com/IvanaaXD/NASP/structures/record"
 	skip_list "github.com/IvanaaXD/NASP/structures/skip-list"
 	"github.com/IvanaaXD/NASP/structures/sstable"
+	"sort"
 )
 
 type Memtable struct {
@@ -133,59 +130,4 @@ func (m *Memtable) Write(rec record.Record) (bool, error) {
 
 func (m *Memtable) Read(key string) (record.Record, bool) {
 	return m.Structure.Read(key)
-}
-
-// getting iterator
-
-func (m *Memtable) GetIterator() iterator.Iterator {
-
-	if iter, err := m.Structure.NewIterator(); err == nil {
-
-		return iter
-	}
-
-	return nil
-}
-
-// searching records by key prefix
-
-func (m *Memtable) PrefixScan(prefix string) []*record.Record {
-
-	iter := m.GetIterator()
-	if iter == nil {
-		return make([]*record.Record, 0)
-	}
-
-	iter.SetIndex()
-	records := make([]*record.Record, 0)
-
-	for iter.Next() {
-		currentRecord := iter.Value()
-
-		if strings.HasPrefix(currentRecord.Key, prefix) {
-			records = append(records, currentRecord)
-		}
-	}
-	return records
-}
-
-// searching for key in given rate
-
-func (m *Memtable) RangeScan(start, finish string) []*record.Record {
-
-	iter := m.GetIterator()
-	if iter == nil {
-		return make([]*record.Record, 0)
-	}
-
-	records := make([]*record.Record, 0)
-
-	for iter.Next() {
-		currentRecord := iter.Value()
-
-		if currentRecord.Key >= start && currentRecord.Key <= finish {
-			records = append(records, currentRecord)
-		}
-	}
-	return records
 }

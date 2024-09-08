@@ -1,7 +1,6 @@
 package memtable
 
 import (
-	"github.com/IvanaaXD/NASP/structures/iterator"
 	"github.com/IvanaaXD/NASP/structures/record"
 )
 
@@ -13,5 +12,4 @@ type Structure interface {
 	Read(key string) (record.Record, bool)
 	Delete(record record.Record) bool
 	GetItems() []record.Record
-	NewIterator() (iterator.Iterator, error)
 }

@@ -36,3 +36,8 @@ func printRecords(records []record.Record) {
 		fmt.Printf("%s : %s\n", records[i].Key, string(records[i].Value))
 	}
 }
+
+func PrintPage(records []record.Record, pageNum int) {
+	fmt.Printf("\n=========================PAGE %d=========================\n", pageNum)
+	printRecords(records)
+}
